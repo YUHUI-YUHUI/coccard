@@ -4,7 +4,7 @@
 
 一款基于 Flutter 构建的在线角色卡应用，兼容移动端与桌面端。
 
-![Screenshot](./screenshot/1028-4.png)
+
 
 
 ## TODO
