@@ -1,0 +1,9 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+
+# Flutter specific
+build/
