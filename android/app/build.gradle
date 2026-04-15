@@ -1,0 +1,95 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.8.0' // Ensure this is the correct version for your setup
+        // Add other classpath dependencies here if needed
+    }
+}
+
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+android {
+    namespace = "com.coccard.app"
+    compileSdk 36
+    ndkVersion = flutter.ndkVersion
+    // minSdkVersion 34
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_1_8
+    }
+
+    defaultConfig {
+        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        applicationId = "com.coccard.app"
+        // You can update the following values to match your application needs.
+        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        minSdkVersion = flutter.minSdkVersion
+        targetSdkVersion 34
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    signingConfigs {
+        release {
+            storeFile file("release.jks")
+            storePassword "coccard123"
+            keyAlias "coccard"
+            keyPassword "coccard123"
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.release
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.buildDir = "../build"
+
+subprojects {
+    // Fix for verifyReleaseResources
+    // ============
+    afterEvaluate { project ->
+        if (project.plugins.hasPlugin("com.android.application") ||
+            project.plugins.hasPlugin("com.android.library")) {
+            project.android {
+                compileSdk 36
+                buildToolsVersion "36.0.0"
+            }
+        }
+        if (project.hasProperty("android")) {
+            project.android {
+                if (namespace == null) {
+                    namespace project.group
+                }
+            }
+        }
+    }
+    // ============
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+    project.evaluationDependsOn(":app")
+}

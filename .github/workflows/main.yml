@@ -1,0 +1,46 @@
+name: Create Pre-release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write  # Allow writing to the repository contents
+  actions: read    # Allow reading actions
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build the app
+        run: flutter build apk --release
+
+      - name: Create Pre-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get the current date and time as a formatted version number
+          VERSION=$(date +'%Y%m%d-%H:%M')
+          # Create a more user-friendly version name
+          PRE_RELEASE_NAME="Pre-release-${VERSION}"
+          # Create the pre-release version and add warning information
+          gh release create "${PRE_RELEASE_NAME}" build/app/outputs/flutter-apk/app-release.apk \
+            --title "${PRE_RELEASE_NAME}" \
+            --notes "This is a pre-release version. Please note that this version is experimental and may be unstable. Make sure to back up your data before using it." \
+            --prerelease  # Specify that this is a pre-release
