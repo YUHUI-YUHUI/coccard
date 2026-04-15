@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /tmp)",
+      "Bash(cp \"D:\\\\code\\\\CLAUDE\\\\coccard/COC七版规则空白卡20.6.1 2D6custom1.32c.xlsx\" temp_file.xlsx)",
+      "Bash(unzip -l temp_file.xlsx)"
+    ]
+  }
+}
