@@ -23,6 +23,8 @@ class Character {
   int creditMax;
   int occupationPoint;
   int interestPoint;
+  int occupationPointSpent;
+  int interestPointSpent;
 
   String backstory;
   String notes;
@@ -69,6 +71,8 @@ class Character {
     this.creditMax = 0,
     this.occupationPoint = 0,
     this.interestPoint = 0,
+    this.occupationPointSpent = 0,
+    this.interestPointSpent = 0,
     this.backstory = '',
     this.notes = '',
     this.cash = 0,
@@ -114,6 +118,8 @@ class Character {
       'creditMax': creditMax,
       'occupationPoint': occupationPoint,
       'interestPoint': interestPoint,
+      'occupationPointSpent': occupationPointSpent,
+      'interestPointSpent': interestPointSpent,
       'backstory': backstory,
       'notes': notes,
       'cash': cash,
@@ -159,6 +165,8 @@ class Character {
       creditMax: json['creditMax'] ?? 0,
       occupationPoint: json['occupationPoint'] ?? 0,
       interestPoint: json['interestPoint'] ?? 0,
+      occupationPointSpent: json['occupationPointSpent'] ?? 0,
+      interestPointSpent: json['interestPointSpent'] ?? 0,
       backstory: json['backstory'] ?? '',
       notes: json['notes'] ?? '',
       cash: json['cash'] ?? 0,

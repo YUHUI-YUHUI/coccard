@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:math';
 import '../data/character_manager.dart';
+import '../data/character.dart';
 import '../data/skill.dart';
 
 class SkillPage extends StatefulWidget {
@@ -43,36 +44,94 @@ class _SkillPageState extends State<SkillPage> with SingleTickerProviderStateMix
           ],
         ),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: '搜索技能...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      )
-                    : null,
+      body: Consumer<CharacterManager>(
+        builder: (context, manager, _) {
+          return Column(
+            children: [
+              _buildPointDisplay(manager.character),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: '搜索技能...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                          )
+                        : null,
+                  ),
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                ),
               ),
-              onChanged: (value) => setState(() => _searchQuery = value),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildSkillList(manager, SkillCategory.academic),
+                    _buildSkillList(manager, SkillCategory.other),
+                    _buildSkillList(manager, null),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPointDisplay(Character character) {
+    final occRemaining = character.occupationPoint - character.occupationPointSpent;
+    final intRemaining = character.interestPoint - character.interestPointSpent;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      color: Colors.grey[100],
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              children: [
+                const Text('职业点数', style: TextStyle(fontSize: 12, color: Colors.blue)),
+                Text(
+                  '$occRemaining / ${character.occupationPoint}',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue),
+                ),
+                const SizedBox(height: 4),
+                LinearProgressIndicator(
+                  value: character.occupationPoint > 0
+                      ? (character.occupationPointSpent / character.occupationPoint)
+                      : 0,
+                  backgroundColor: Colors.blue[100],
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                ),
+              ],
             ),
           ),
+          const SizedBox(width: 16),
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
+            child: Column(
               children: [
-                _buildSkillList(context, SkillCategory.academic),
-                _buildSkillList(context, SkillCategory.other),
-                _buildSkillList(context, null),
+                const Text('兴趣点数', style: TextStyle(fontSize: 12, color: Colors.green)),
+                Text(
+                  '$intRemaining / ${character.interestPoint}',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
+                ),
+                const SizedBox(height: 4),
+                LinearProgressIndicator(
+                  value: character.interestPoint > 0
+                      ? (character.interestPointSpent / character.interestPoint)
+                      : 0,
+                  backgroundColor: Colors.green[100],
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                ),
               ],
             ),
           ),
@@ -81,8 +140,7 @@ class _SkillPageState extends State<SkillPage> with SingleTickerProviderStateMix
     );
   }
 
-  Widget _buildSkillList(BuildContext context, SkillCategory? filter) {
-    final manager = Provider.of<CharacterManager>(context);
+  Widget _buildSkillList(CharacterManager manager, SkillCategory? filter) {
     final character = manager.character;
 
     List<SkillDef> filteredSkills = SKILL_DEFS.where((skill) {
@@ -147,38 +205,108 @@ class _SkillPageState extends State<SkillPage> with SingleTickerProviderStateMix
   }
 
   void _showSkillEditDialog(BuildContext context, SkillDef skill, int currentValue, CharacterManager manager) {
-    final ctrl = TextEditingController(text: currentValue.toString());
+    final character = manager.character;
+    final occRemaining = character.occupationPoint - character.occupationPointSpent;
+    final intRemaining = character.interestPoint - character.interestPointSpent;
+    final occCtrl = TextEditingController();
+    final intCtrl = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(skill.name),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('基础值: ${skill.baseHalf}%'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: ctrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: '技能值'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(skill.name),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('当前值: $currentValue%  (基础值: ${skill.baseHalf}%)'),
+                const SizedBox(height: 16),
+                const Text('分别投入职业点数和兴趣点数:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Text('职业点数: '),
+                    SizedBox(
+                      width: 80,
+                      child: TextField(
+                        controller: occCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          hintText: '0',
+                          suffixText: "/$occRemaining",
+                          isDense: true,
+                        ),
+                        onChanged: (_) => setDialogState(() {}),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Text('兴趣点数: '),
+                    SizedBox(
+                      width: 80,
+                      child: TextField(
+                        controller: intCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          hintText: '0',
+                          suffixText: "/$intRemaining",
+                          isDense: true,
+                        ),
+                        onChanged: (_) => setDialogState(() {}),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '将增加: ${((int.tryParse(occCtrl.text) ?? 0) + (int.tryParse(intCtrl.text) ?? 0))}%',
+                  style: const TextStyle(color: Colors.blue),
+                ),
+                const SizedBox(height: 16),
+                if (occRemaining == 0 && intRemaining == 0)
+                  const Text('无可用点数', style: TextStyle(color: Colors.red)),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final occAdd = int.tryParse(occCtrl.text) ?? 0;
+                final intAdd = int.tryParse(intCtrl.text) ?? 0;
+
+                if (occAdd > 0) {
+                  final success = manager.addSkillPoints(skill.name, occAdd, true);
+                  if (!success) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('职业点数不足！')),
+                    );
+                    return;
+                  }
+                }
+                if (intAdd > 0) {
+                  final success = manager.addSkillPoints(skill.name, intAdd, false);
+                  if (!success) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('兴趣点数不足！')),
+                    );
+                    return;
+                  }
+                }
+                Navigator.pop(context);
+              },
+              child: const Text('确认'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final value = int.tryParse(ctrl.text) ?? skill.baseHalf;
-              manager.updateSkill(skill.name, value);
-              Navigator.pop(context);
-            },
-            child: const Text('保存'),
-          ),
-        ],
       ),
     );
   }
