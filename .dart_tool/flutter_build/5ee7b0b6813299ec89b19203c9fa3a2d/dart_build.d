@@ -1,1 +1,0 @@
- D:\\code\\CLAUDE\\coccard\\.dart_tool\\flutter_build\\5ee7b0b6813299ec89b19203c9fa3a2d\\dart_build_result.json: 

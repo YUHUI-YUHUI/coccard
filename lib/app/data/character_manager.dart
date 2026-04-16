@@ -183,6 +183,9 @@ class CharacterManager extends ChangeNotifier {
   }
 
   void applyOccupation(Occupation occ) {
+    // 重置之前消耗的点数
+    resetSkillPoints();
+
     final c = character;
     c.occupation = occ.n;
     c.selectedOccId = occ.id;
@@ -288,6 +291,42 @@ class CharacterManager extends ChangeNotifier {
 
   void updateSkill(String skillName, int value) {
     character.skills[skillName] = value;
+    _saveCharacters();
+    notifyListeners();
+  }
+
+  /// 添加技能点数
+  /// [skillName] 技能名称
+  /// [amount] 加点数额
+  /// [useOccupationPoint] true=使用职业点数, false=使用兴趣点数
+  /// 返回是否成功
+  bool addSkillPoints(String skillName, int amount, bool useOccupationPoint) {
+    final c = character;
+    if (amount <= 0) return false;
+
+    if (useOccupationPoint) {
+      final remaining = c.occupationPoint - c.occupationPointSpent;
+      if (amount > remaining) return false;
+      c.occupationPointSpent += amount;
+    } else {
+      final remaining = c.interestPoint - c.interestPointSpent;
+      if (amount > remaining) return false;
+      c.interestPointSpent += amount;
+    }
+
+    // 计算新技能值 = 当前值 + 加点数
+    final currentValue = c.skills[skillName] ?? 0;
+    c.skills[skillName] = currentValue + amount;
+    _saveCharacters();
+    notifyListeners();
+    return true;
+  }
+
+  /// 重置职业时调用的点数重置
+  void resetSkillPoints() {
+    final c = character;
+    c.occupationPointSpent = 0;
+    c.interestPointSpent = 0;
     _saveCharacters();
     notifyListeners();
   }

@@ -1,0 +1,1 @@
+ D:\\code\\CLAUDE\\coccard\\.dart_tool\\flutter_build\\b3000baf31d8e839e31a8f991bd04b88\\native_assets.json: 

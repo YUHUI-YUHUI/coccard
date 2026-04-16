@@ -8,8 +8,15 @@ import '../widgets/dice_roller.dart';
 import '../widgets/app_drawer_widget.dart';
 import '../data/coc_data.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  bool _isEditMode = false;
 
   @override
   Widget build(BuildContext context) {
@@ -25,8 +32,18 @@ class HomePage extends StatelessWidget {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
+            icon: Icon(_isEditMode ? Icons.check : Icons.edit),
+            onPressed: () {
+              setState(() => _isEditMode = !_isEditMode);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(_isEditMode ? '已进入编辑模式' : '已退出编辑模式')),
+              );
+            },
+            tooltip: '编辑模式',
+          ),
+          IconButton(
             icon: const Icon(Icons.casino_outlined),
-            onPressed: () => _showDiceRoller(context),
+            onPressed: _isEditMode ? () => _showDiceRoller(context) : null,
             tooltip: '投骰子',
           ),
         ],
@@ -44,7 +61,7 @@ class HomePage extends StatelessWidget {
                 const SizedBox(height: 16),
                 _buildAttributeCard(context, character, manager),
                 const SizedBox(height: 16),
-                _buildDerivedStatsCard(context, character),
+                _buildDerivedStatsCard(context, manager.character, manager),
                 const SizedBox(height: 16),
                 _buildWeaponsCard(context, character),
                 const SizedBox(height: 16),
@@ -118,17 +135,28 @@ class HomePage extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('属性', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                IconButton(
-                  icon: const Icon(Icons.casino),
-                  onPressed: () {
-                    manager.rollAttributes();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('已随机生成属性 (3D6×5)')),
-                    );
-                  },
-                  tooltip: '随机属性',
+                Row(
+                  children: [
+                    const Text('属性', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    if (_isEditMode) ...[
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.casino, color: Colors.purple, size: 20),
+                        onPressed: () {
+                          manager.rollAttributes();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('已随机生成属性 (3D6×5)')),
+                          );
+                        },
+                        tooltip: '随机属性',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ],
                 ),
+                if (_isEditMode)
+                  const Icon(Icons.edit, color: Colors.green, size: 16),
               ],
             ),
             const Divider(),
@@ -144,6 +172,7 @@ class HomePage extends StatelessWidget {
                 '教育': character.edu,
               },
               onEdit: (attr, value) => manager.updateAttribute(attr, value),
+              isEditable: _isEditMode,
             ),
           ],
         ),
@@ -151,7 +180,10 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildDerivedStatsCard(BuildContext context, Character character) {
+  Widget _buildDerivedStatsCard(BuildContext context, Character character, CharacterManager manager) {
+    final occRemaining = character.occupationPoint - character.occupationPointSpent;
+    final intRemaining = character.interestPoint - character.interestPointSpent;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -180,7 +212,7 @@ class HomePage extends StatelessWidget {
                   children: [
                     const Text('职业点数', style: TextStyle(color: Colors.blue)),
                     Text(
-                      '${character.occupationPoint}',
+                      '$occRemaining / ${character.occupationPoint}',
                       style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue),
                     ),
                   ],
@@ -189,7 +221,7 @@ class HomePage extends StatelessWidget {
                   children: [
                     const Text('兴趣点数', style: TextStyle(color: Colors.green)),
                     Text(
-                      '${character.interestPoint}',
+                      '$intRemaining / ${character.interestPoint}',
                       style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green),
                     ),
                   ],
