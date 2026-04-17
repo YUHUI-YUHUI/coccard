@@ -12,3 +12,7 @@ build/
 # Large files
 *.zip
 *.apk
+*.pdf
+coccard-release.apk
+assets/Noto_Sans_SC/OFL.txt
+assets/Noto_Sans_SC/README.txt
