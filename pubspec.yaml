@@ -14,6 +14,8 @@ dependencies:
   provider: ^6.1.2
   shared_preferences: ^2.2.2
   cupertino_icons: ^1.0.8
+  pdf: ^3.10.0
+  printing: ^5.12.0
 
 dev_dependencies:
   flutter_test:
@@ -26,3 +28,5 @@ flutter:
   assets:
     - assets/character.jpg
     - assets/d20.png
+    - assets/1920sCha_01.png
+    - assets/1920sCha_02.png

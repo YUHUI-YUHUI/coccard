@@ -7,6 +7,7 @@ import '../widgets/derived_stats_widget.dart';
 import '../widgets/dice_roller.dart';
 import '../widgets/app_drawer_widget.dart';
 import '../data/coc_data.dart';
+import '../services/pdf_generator.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -45,6 +46,14 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.casino_outlined),
             onPressed: _isEditMode ? () => _showDiceRoller(context) : null,
             tooltip: '投骰子',
+          ),
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            onPressed: () {
+              final manager = Provider.of<CharacterManager>(context, listen: false);
+              PdfGenerator.generateAndPrint(manager.character);
+            },
+            tooltip: '导出PDF',
           ),
         ],
       ),
