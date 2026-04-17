@@ -7,3 +7,8 @@
 
 # Flutter specific
 build/
+.dart_tool/flutter_build/
+
+# Large files
+*.zip
+*.apk
