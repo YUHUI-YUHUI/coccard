@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -66,6 +67,175 @@ class PdfGenerator {
     await Printing.sharePdf(
       bytes: await pdf.save(),
       filename: '${character.name.isEmpty ? "新角色" : character.name}_角色卡.pdf',
+    );
+  }
+
+  // ==================== 可填写表单 PDF ====================
+  static Future<Uint8List> generateFillablePdfBytes(Character character) async {
+    final pdf = pw.Document();
+    await _loadFonts();
+    final bg1 = await _loadImage('assets/1920sCha_01.png');
+    final bg2 = await _loadImage('assets/1920sCha_02.png');
+
+    final formFields = _buildFormFieldsData(character);
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: pw.EdgeInsets.zero,
+        build: (context) => _buildFillablePage1(character, bg1, bg2 == null, formFields),
+      ),
+    );
+
+    if (bg2 != null) {
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: pw.EdgeInsets.zero,
+          build: (context) => _buildFillablePage2(character, bg2, formFields),
+        ),
+      );
+    }
+
+    return pdf.save();
+  }
+
+  static Future<void> generateFillablePdfFile(Character character, String outputPath) async {
+    final bytes = await generateFillablePdfBytes(character);
+    final file = File(outputPath);
+    await file.writeAsBytes(bytes);
+  }
+
+  static Map<String, String> _buildFormFieldsData(Character character) {
+    return {
+      // 第一页字段
+      'name': character.name,
+      'player': character.player,
+      'occupation': character.occupation,
+      'age': character.age,
+      'gender': character.gender,
+      'residence': character.residence,
+      'birthplace': character.birthplace,
+      'str': '${character.str}',
+      'con': '${character.con}',
+      'siz': '${character.siz}',
+      'dex': '${character.dex}',
+      'app': '${character.app}',
+      'int': '${character.int_}',
+      'pow': '${character.pow}',
+      'edu': '${character.edu}',
+      'hp': '${character.currentHp}/${character.maxHp}',
+      'mp': '${character.currentMp}/${character.maxMp}',
+      'sanity': '${character.sanity}/${character.maxSanity}',
+      'luck': '${character.luck}',
+      'move': '${character.move}',
+      'build': '${character.build}',
+      'damageBonus': character.damageBonus,
+      // 第二页字段
+      'cash': '${character.cash}',
+      'spending': '${character.spending}',
+      'assets': '${character.assets}',
+      'backstory': character.backstory,
+    };
+  }
+
+  static pw.Widget _buildFillablePage1(Character character, Uint8List? bg1, bool singlePage, Map<String, String> formData) {
+    final fields = <pw.Widget>[];
+
+    // 添加表单字段（透明边框，用户可直接填写）
+    fields.add(_buildTextField('name', 30, 23, 40, 5, formData['name'] ?? '', 9));
+    fields.add(_buildTextField('player', 75, 23, 35, 5, formData['player'] ?? '', 9));
+    fields.add(_buildTextField('occupation', 115, 23, 50, 5, formData['occupation'] ?? '', 9));
+    fields.add(_buildTextField('age', 170, 23, 18, 5, formData['age'] ?? '', 9));
+    fields.add(_buildTextField('gender', 190, 23, 15, 5, formData['gender'] ?? '', 9));
+    fields.add(_buildTextField('residence', 30, 33, 80, 5, formData['residence'] ?? '', 9));
+    fields.add(_buildTextField('birthplace', 115, 33, 50, 5, formData['birthplace'] ?? '', 9));
+
+    // 属性字段
+    fields.add(_buildTextField('str', 55, 52, 20, 4, formData['str'] ?? '', 8));
+    fields.add(_buildTextField('con', 55, 60, 20, 4, formData['con'] ?? '', 8));
+    fields.add(_buildTextField('siz', 55, 68, 20, 4, formData['siz'] ?? '', 8));
+    fields.add(_buildTextField('dex', 55, 76, 20, 4, formData['dex'] ?? '', 8));
+    fields.add(_buildTextField('app', 55, 84, 20, 4, formData['app'] ?? '', 8));
+    fields.add(_buildTextField('int', 55, 92, 20, 4, formData['int'] ?? '', 8));
+    fields.add(_buildTextField('pow', 55, 100, 20, 4, formData['pow'] ?? '', 8));
+    fields.add(_buildTextField('edu', 55, 108, 20, 4, formData['edu'] ?? '', 8));
+
+    // 衍生属性
+    fields.add(_buildTextField('hp', 32, 120, 25, 4, formData['hp'] ?? '', 8));
+    fields.add(_buildTextField('mp', 58, 120, 25, 4, formData['mp'] ?? '', 8));
+    fields.add(_buildTextField('sanity', 85, 120, 28, 4, formData['sanity'] ?? '', 8));
+    fields.add(_buildTextField('luck', 115, 120, 25, 4, formData['luck'] ?? '', 8));
+    fields.add(_buildTextField('move', 148, 120, 18, 4, formData['move'] ?? '', 8));
+    fields.add(_buildTextField('build', 168, 120, 18, 4, formData['build'] ?? '', 8));
+    fields.add(_buildTextField('damageBonus', 188, 120, 18, 4, formData['damageBonus'] ?? '', 8));
+
+    // 技能（只读显示）
+    double yMm = 132;
+    for (final entry in character.skills.entries) {
+      if (fields.length >= 50) break;
+      fields.add(pw.Positioned(
+        left: mm(30),
+        top: mm(yMm),
+        child: pw.Text('${entry.key} ${entry.value}%', style: _ts(5.5)),
+      ));
+      yMm += 3.5;
+    }
+
+    return pw.Stack(
+      children: [
+        if (bg1 != null)
+          pw.Positioned.fill(
+            child: pw.Image(pw.MemoryImage(bg1), fit: pw.BoxFit.cover),
+          ),
+        ...fields,
+      ],
+    );
+  }
+
+  static pw.Widget _buildFillablePage2(Character character, Uint8List? bg2, Map<String, String> formData) {
+    final fields = <pw.Widget>[];
+
+    // 武器（只读显示）
+    double yMm = 30;
+    for (final w in character.weapons) {
+      if (fields.length >= 10) break;
+      fields.add(pw.Positioned(left: mm(30), top: mm(yMm), child: pw.Text(w.name, style: _ts(7))));
+      fields.add(pw.Positioned(left: mm(95), top: mm(yMm), child: pw.Text('${w.skill}%', style: _ts(7))));
+      fields.add(pw.Positioned(left: mm(125), top: mm(yMm), child: pw.Text(w.damage, style: _ts(7))));
+      fields.add(pw.Positioned(left: mm(155), top: mm(yMm), child: pw.Text(w.range, style: _ts(7))));
+      yMm += 7;
+    }
+
+    // 财务字段
+    fields.add(_buildTextField('cash', 40, 113, 45, 5, formData['cash'] ?? '', 9));
+    fields.add(_buildTextField('spending', 90, 113, 45, 5, formData['spending'] ?? '', 9));
+    fields.add(_buildTextField('assets', 140, 113, 45, 5, formData['assets'] ?? '', 9));
+
+    // 背景故事
+    fields.add(_buildTextField('backstory', 30, 128, 150, 40, formData['backstory'] ?? '', 6, multiLine: true));
+
+    return pw.Stack(
+      children: [
+        if (bg2 != null)
+          pw.Positioned.fill(
+            child: pw.Image(pw.MemoryImage(bg2), fit: pw.BoxFit.cover),
+          ),
+        ...fields,
+      ],
+    );
+  }
+
+  static pw.Widget _buildTextField(String fieldName, double left, double top, double width, double height, String value, double fontSize, {bool multiLine = false}) {
+    return pw.Positioned(
+      left: mm(left),
+      top: mm(top),
+      child: pw.TextField(
+        name: fieldName,
+        defaultValue: value,
+        width: mm(width),
+        height: mm(height),
+      ),
     );
   }
 
