@@ -110,11 +110,10 @@ class _HomePageState extends State<HomePage> {
             _infoRow('居住地', character.residence),
             _infoRow('出生地', character.birthplace),
             const SizedBox(height: 8),
-            if (character.selectedOccId == null)
-              ElevatedButton(
-                onPressed: () => _showOccupationPicker(context, manager),
-                child: const Text('选择职业'),
-              ),
+            ElevatedButton(
+              onPressed: () => _showOccupationPicker(context, manager),
+              child: Text(character.selectedOccId == null ? '选择职业' : '更换职业'),
+            ),
           ],
         ),
       ),
@@ -383,10 +382,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _showOccupationPicker(BuildContext context, CharacterManager manager) {
+    final scaffoldContext = context;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => DraggableScrollableSheet(
+      builder: (sheetContext) => DraggableScrollableSheet(
         initialChildSize: 0.9,
         minChildSize: 0.5,
         maxChildSize: 0.95,
@@ -407,10 +407,13 @@ class _HomePageState extends State<HomePage> {
                     return ListTile(
                       title: Text(occ.n),
                       subtitle: Text('信用: ${occ.min}-${occ.max}'),
+                      trailing: manager.character.selectedOccId == occ.id
+                          ? const Icon(Icons.check, color: Colors.blue)
+                          : null,
                       onTap: () {
                         manager.applyOccupation(occ);
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        Navigator.pop(sheetContext);
+                        ScaffoldMessenger.of(scaffoldContext).showSnackBar(
                           SnackBar(content: Text('已选择职业: ${occ.n}')),
                         );
                       },

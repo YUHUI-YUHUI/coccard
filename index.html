@@ -2688,6 +2688,8 @@ function openOccPicker() {
   const overlay = document.getElementById('occPickerOverlay');
   overlay.classList.add('open');
   document.getElementById('occPickerSearch').value = '';
+  // 确保选择器中的选中状态与当前已选职业同步
+  if (char.basic.selectedOccId) selectedOccId = char.basic.selectedOccId;
   renderOccPickerList(OCCUPATIONS);
   setTimeout(() => document.getElementById('occPickerSearch').focus(), 300);
 }

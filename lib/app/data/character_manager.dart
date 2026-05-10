@@ -164,6 +164,21 @@ class CharacterManager extends ChangeNotifier {
       c.damageBonus = '0';
     }
     c.luckDice = 3;
+
+    // 属性变化时重新计算职业点数和兴趣点数
+    _recalculateOccupationPoints();
+  }
+
+  void _recalculateOccupationPoints() {
+    final c = character;
+    if (c.selectedOccId != null) {
+      final occ = OCCUPATIONS.where((o) => o.id == c.selectedOccId).firstOrNull;
+      if (occ != null) {
+        _calculateOccupationAndInterestPoints(occ);
+      }
+    } else {
+      c.interestPoint = c.int_ * 2;
+    }
   }
 
   void rollAttributes() {
@@ -183,10 +198,12 @@ class CharacterManager extends ChangeNotifier {
   }
 
   void applyOccupation(Occupation occ) {
-    // 重置之前消耗的点数
-    resetSkillPoints();
-
     final c = character;
+    // 重置之前消耗的点数和技能
+    c.occupationPointSpent = 0;
+    c.interestPointSpent = 0;
+    c.skills.clear();
+
     c.occupation = occ.n;
     c.selectedOccId = occ.id;
     c.creditMin = occ.min;
@@ -314,8 +331,10 @@ class CharacterManager extends ChangeNotifier {
       c.interestPointSpent += amount;
     }
 
-    // 计算新技能值 = 当前值 + 加点数
-    final currentValue = c.skills[skillName] ?? 0;
+    // 计算新技能值 = 当前值 + 加点数（未分配的技能使用基础值）
+    final skillDef = SKILL_DEFS.where((s) => s.key == skillName).firstOrNull;
+    final baseValue = skillDef?.baseHalf ?? 0;
+    final currentValue = c.skills[skillName] ?? baseValue;
     c.skills[skillName] = currentValue + amount;
     _saveCharacters();
     notifyListeners();
