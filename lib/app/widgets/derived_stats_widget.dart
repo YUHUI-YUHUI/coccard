@@ -13,7 +13,7 @@ class DerivedStatsWidget extends StatelessWidget {
       Row(children: [
         Expanded(child: Container(
           margin: const EdgeInsets.all(4), padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.red.withValues(alpha: 0.3))),
+          decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.red.withOpacity(0.3))),
           child: Column(children: [const Text('伤害加成', style: TextStyle(fontSize: 12, color: Colors.grey)), const SizedBox(height: 4), Text(damageBonus, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red))]),
         )),
         const Expanded(child: SizedBox()),
@@ -24,7 +24,7 @@ class DerivedStatsWidget extends StatelessWidget {
   Widget _statBox(String label, String value, IconData icon, Color color) {
     return Container(
       margin: const EdgeInsets.all(4), padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: color.withValues(alpha: 0.3))),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: color.withOpacity(0.3))),
       child: Row(children: [Icon(icon, color: color, size: 24), const SizedBox(width: 8), Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: TextStyle(fontSize: 12, color: color)), Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color))])]),
     );
   }
