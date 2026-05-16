@@ -13,6 +13,14 @@
 - 深色/浅色主题切换
 - 数据持久化存储
 
+## 预览截图
+
+![预览1](screenshot/749de96d203d9f17d2dfe1c4e330252c.jpg)
+
+![预览2](screenshot/a26935fb102df313f631764ba6b618d0.jpg)
+
+![预览3](screenshot/e6565dfe113d5aa397c51a7b5df39204.jpg)
+
 ## 技术栈
 
 - Flutter 3.24+
