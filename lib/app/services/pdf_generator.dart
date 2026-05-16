@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -701,7 +702,7 @@ class PdfGenerator {
         _chineseBoldFont = pw.Font.ttf(boldData);
       }
     } catch (e) {
-      print('[PdfGenerator] 字体加载失败: $e');
+      debugPrint('[PdfGenerator] 字体加载失败: $e');
     }
     _fontsLoaded = true;
   }

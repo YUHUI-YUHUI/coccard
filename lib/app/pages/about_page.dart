@@ -5,6 +5,8 @@ class AboutPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('关于'),
@@ -14,28 +16,30 @@ class AboutPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'COC 角色卡',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: cs.onSurface),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               '版本 1.0.0',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: cs.onSurfaceVariant),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               '克苏鲁的呼唤 第七版 角色卡应用',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: cs.onSurface),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               '基于 Flutter 构建的 COC 7th Edition 角色卡管理应用。'
-              '支持角色属性管理、技能追踪、武器管理、骰子系统等功能。'),
+              '支持角色属性管理、技能追踪、武器管理、骰子系统等功能。',
+              style: TextStyle(color: cs.onSurface),
+            ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               '主要功能',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: cs.onSurface),
             ),
             const SizedBox(height: 8),
             const _FeatureItem(icon: Icons.person, text: '角色属性管理（STR, CON, SIZ, DEX, APP, INT, POW, EDU）'),
@@ -46,13 +50,13 @@ class AboutPage extends StatelessWidget {
             const _FeatureItem(icon: Icons.library_books, text: '职业列表（230+ 职业）'),
             const _FeatureItem(icon: Icons.save, text: '本地数据持久化'),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               '开发信息',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: cs.onSurface),
             ),
             const SizedBox(height: 8),
-            const Text('使用 Flutter + Provider + Isar 构建'),
-            const Text('数据来源于 COC 7th Edition 官方规则书'),
+            Text('使用 Flutter + Provider + SharedPreferences 构建', style: TextStyle(color: cs.onSurface)),
+            Text('数据来源于 COC 7th Edition 官方规则书', style: TextStyle(color: cs.onSurface)),
           ],
         ),
       ),
@@ -68,13 +72,14 @@ class _FeatureItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+          Icon(icon, size: 20, color: cs.primary),
           const SizedBox(width: 8),
-          Expanded(child: Text(text)),
+          Expanded(child: Text(text, style: TextStyle(color: cs.onSurface))),
         ],
       ),
     );
