@@ -15,11 +15,9 @@
 
 ## 预览截图
 
-![预览1](screenshot/749de96d203d9f17d2dfe1c4e330252c.jpg)
-
-![预览2](screenshot/a26935fb102df313f631764ba6b618d0.jpg)
-
-![预览3](screenshot/e6565dfe113d5aa397c51a7b5df39204.jpg)
+<img src="screenshot/749de96d203d9f17d2dfe1c4e330252c.jpg" width="300" />
+<img src="screenshot/a26935fb102df313f631764ba6b618d0.jpg" width="300" />
+<img src="screenshot/e6565dfe113d5aa397c51a7b5df39204.jpg" width="300" />
 
 ## 技术栈
 
