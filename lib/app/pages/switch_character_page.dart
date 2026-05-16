@@ -68,8 +68,9 @@ class SwitchCharacterPage extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          context.read<CharacterManager>().createNewCharacter();
-          Navigator.pop(context);
+          Navigator.pushNamed(context, '/create_character').then((_) {
+            // 创建完成后刷新
+          });
         },
         child: const Icon(Icons.add),
       ),

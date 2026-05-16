@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app/pages/home_page.dart';
 import 'app/data/character_manager.dart';
 import 'app/pages/switch_character_page.dart';
+import 'app/pages/character_creation_page.dart';
 import 'app/pages/settings_page.dart';
 import 'app/pages/about_page.dart';
 import 'app/pages/skill_page.dart';
@@ -52,6 +53,7 @@ class COCCharacterApp extends StatelessWidget {
       routes: {
         '/': (context) => const HomePage(),
         '/switch_character': (context) => const SwitchCharacterPage(),
+        '/create_character': (context) => const CharacterCreationPage(),
         '/settings': (context) => const SettingsPage(),
         '/about': (context) => const AboutPage(),
         '/skills': (context) => const SkillPage(),
