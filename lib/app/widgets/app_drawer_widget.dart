@@ -49,7 +49,7 @@ class AppDrawerWidget extends StatelessWidget {
             title: const Text('创建新角色'),
             onTap: () {
               Navigator.pop(context);
-              context.read<CharacterManager>().createNewCharacter();
+              Navigator.pushNamed(context, '/create_character');
             },
           ),
           const Divider(),

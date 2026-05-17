@@ -26,8 +26,7 @@ class SwitchCharacterPage extends StatelessWidget {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      manager.createNewCharacter();
-                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/create_character');
                     },
                     child: const Text('创建新角色'),
                   ),

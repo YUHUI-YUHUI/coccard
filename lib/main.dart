@@ -10,6 +10,7 @@ import 'app/pages/about_page.dart';
 import 'app/pages/skill_page.dart';
 import 'app/pages/weapon_page.dart';
 import 'app/pages/reference_page.dart';
+import 'app/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,22 +35,8 @@ class COCCharacterApp extends StatelessWidget {
     return MaterialApp(
       title: 'COC 角色卡',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.indigo,
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.indigo,
-          brightness: Brightness.light,
-        ),
-      ),
-      darkTheme: ThemeData(
-        primarySwatch: Colors.indigo,
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.indigo,
-          brightness: Brightness.dark,
-        ),
-      ),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
       routes: {
         '/': (context) => const HomePage(),
         '/switch_character': (context) => const SwitchCharacterPage(),
