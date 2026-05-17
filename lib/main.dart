@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app/pages/home_page.dart';
+import 'app/pages/start_page.dart';
 import 'app/data/character_manager.dart';
 import 'app/pages/switch_character_page.dart';
 import 'app/pages/character_creation_page.dart';
@@ -38,7 +39,8 @@ class COCCharacterApp extends StatelessWidget {
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       routes: {
-        '/': (context) => const HomePage(),
+        '/': (context) => const StartPage(),
+        '/home': (context) => const HomePage(),
         '/switch_character': (context) => const SwitchCharacterPage(),
         '/create_character': (context) => const CharacterCreationPage(),
         '/settings': (context) => const SettingsPage(),

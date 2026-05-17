@@ -18,8 +18,14 @@ class CharacterManager extends ChangeNotifier {
     _loadCharacters();
   }
 
+  int _nextId() {
+    if (_characters.isEmpty) return 1;
+    return _characters.map((c) => c.id).reduce((a, b) => a > b ? a : b) + 1;
+  }
+
   Character get character => _characters.isNotEmpty ? _characters[_currentIndex] : Character();
   List<Character> get characters => _characters;
+  bool get hasCharacters => _characters.isNotEmpty;
 
   void _loadCharacters() {
     final String? charsJson = _prefs.getString(_charactersKey);
@@ -27,10 +33,11 @@ class CharacterManager extends ChangeNotifier {
       final List<dynamic> decoded = json.decode(charsJson);
       _characters = decoded.map((e) => Character.fromJson(e)).toList();
     }
-    _currentIndex = _prefs.getInt(_currentIndexKey) ?? 0;
-    if (_characters.isEmpty) {
-      _characters.add(Character());
+    // 给旧数据中 id=0 的角色补上唯一 ID
+    for (final c in _characters) {
+      if (c.id == 0) c.id = _nextId();
     }
+    _currentIndex = _prefs.getInt(_currentIndexKey) ?? 0;
     if (_currentIndex >= _characters.length) {
       _currentIndex = 0;
     }
@@ -44,15 +51,18 @@ class CharacterManager extends ChangeNotifier {
   }
 
   Future<void> createNewCharacter() async {
-    _characters.add(Character());
+    final newChar = Character(id: _nextId());
+    _characters.add(newChar);
     _currentIndex = _characters.length - 1;
     await _saveCharacters();
     notifyListeners();
   }
 
-  Future<void> selectCharacter(int index) async {
-    if (index >= 0 && index < _characters.length) {
-      _currentIndex = index;
+  /// 按 ID 查找并切换角色
+  Future<void> selectCharacter(int id) async {
+    final idx = _characters.indexWhere((c) => c.id == id);
+    if (idx >= 0) {
+      _currentIndex = idx;
       await _saveCharacters();
       notifyListeners();
     }

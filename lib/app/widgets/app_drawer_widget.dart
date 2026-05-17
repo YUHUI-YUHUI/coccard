@@ -15,18 +15,18 @@ class AppDrawerWidget extends StatelessWidget {
             builder: (context, manager, _) {
               return DrawerHeader(
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.inversePrimary,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    const Icon(Icons.person, size: 48, color: Colors.white),
+                    Icon(Icons.person, size: 48, color: Theme.of(context).colorScheme.onPrimary),
                     const SizedBox(height: 8),
                     Text(
                       manager.character.name.isEmpty ? '新角色' : manager.character.name,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimary,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
@@ -34,8 +34,8 @@ class AppDrawerWidget extends StatelessWidget {
                     if (manager.character.occupation.isNotEmpty)
                       Text(
                         manager.character.occupation,
-                        style: const TextStyle(
-                          color: Colors.white70,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.7),
                           fontSize: 14,
                         ),
                       ),

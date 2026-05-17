@@ -93,24 +93,24 @@ class _SkillPageState extends State<SkillPage> with SingleTickerProviderStateMix
 
     return Container(
       padding: const EdgeInsets.all(12),
-      color: Colors.grey[100],
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Row(
         children: [
           Expanded(
             child: Column(
               children: [
-                const Text('职业点数', style: TextStyle(fontSize: 12, color: Colors.blue)),
+                Text('职业点数', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary)),
                 Text(
                   '$occRemaining / ${character.occupationPoint}',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
                 ),
                 const SizedBox(height: 4),
                 LinearProgressIndicator(
                   value: character.occupationPoint > 0
                       ? (character.occupationPointSpent / character.occupationPoint)
                       : 0,
-                  backgroundColor: Colors.blue[100],
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                  backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
                 ),
               ],
             ),
@@ -119,18 +119,18 @@ class _SkillPageState extends State<SkillPage> with SingleTickerProviderStateMix
           Expanded(
             child: Column(
               children: [
-                const Text('兴趣点数', style: TextStyle(fontSize: 12, color: Colors.green)),
+                Text('兴趣点数', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.tertiary)),
                 Text(
                   '$intRemaining / ${character.interestPoint}',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.tertiary),
                 ),
                 const SizedBox(height: 4),
                 LinearProgressIndicator(
                   value: character.interestPoint > 0
                       ? (character.interestPointSpent / character.interestPoint)
                       : 0,
-                  backgroundColor: Colors.green[100],
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                  backgroundColor: Theme.of(context).colorScheme.tertiary.withOpacity(0.2),
+                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.tertiary),
                 ),
               ],
             ),
@@ -173,7 +173,7 @@ class _SkillPageState extends State<SkillPage> with SingleTickerProviderStateMix
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: skillValue >= skill.baseHalf ? Colors.green : Colors.grey,
+                    color: skillValue >= skill.baseHalf ? Theme.of(context).colorScheme.tertiary : Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
                 IconButton(
@@ -338,14 +338,14 @@ class _SkillPageState extends State<SkillPage> with SingleTickerProviderStateMix
           children: [
             Text('$roll', style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text('技能值: $skillValue%', style: const TextStyle(color: Colors.grey)),
+            Text('技能值: $skillValue%', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 16),
             Text(
               resultText,
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: success ? Colors.green : Colors.red,
+                color: success ? Theme.of(context).colorScheme.tertiary : Theme.of(context).colorScheme.error,
               ),
             ),
           ],

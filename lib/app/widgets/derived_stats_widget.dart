@@ -14,7 +14,7 @@ class DerivedStatsWidget extends StatelessWidget {
         Expanded(child: Container(
           margin: const EdgeInsets.all(4), padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.red.withOpacity(0.3))),
-          child: Column(children: [const Text('伤害加成', style: TextStyle(fontSize: 12, color: Colors.grey)), const SizedBox(height: 4), Text(damageBonus, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red))]),
+          child: Column(children: [Text('伤害加成', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)), const SizedBox(height: 4), Text(damageBonus, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red))]),
         )),
         const Expanded(child: SizedBox()),
       ]),

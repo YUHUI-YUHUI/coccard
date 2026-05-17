@@ -30,7 +30,8 @@ class _HomePageState extends State<HomePage> {
                 : manager.character.name);
           },
         ),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         actions: [
           IconButton(
             icon: Icon(_isEditMode ? Icons.check : Icons.edit),
@@ -218,19 +219,19 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Column(
                   children: [
-                    const Text('职业点数', style: TextStyle(color: Colors.blue)),
+                    Text('职业点数', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
                     Text(
                       '$occRemaining / ${character.occupationPoint}',
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue),
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
                     ),
                   ],
                 ),
                 Column(
                   children: [
-                    const Text('兴趣点数', style: TextStyle(color: Colors.green)),
+                    Text('兴趣点数', style: TextStyle(color: Theme.of(context).colorScheme.tertiary)),
                     Text(
                       '$intRemaining / ${character.interestPoint}',
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green),
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.tertiary),
                     ),
                   ],
                 ),
@@ -270,7 +271,7 @@ class _HomePageState extends State<HomePage> {
             ),
             const Divider(),
             if (character.weapons.isEmpty)
-              const Text('暂无武器', style: TextStyle(color: Colors.grey))
+              Text('暂无武器', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant))
             else
               ...character.weapons.take(3).map((w) => ListTile(
                 dense: true,

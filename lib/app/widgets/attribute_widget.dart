@@ -65,7 +65,7 @@ class AttributeWidget extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
-            Text(name, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+            Text(name, style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 4),
             Text(value.toString(), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           ],

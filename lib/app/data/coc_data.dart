@@ -524,3 +524,23 @@ const MANIAS = [
   '秩序狂：过度追求秩序。',
   '规则狂：过度遵守规则。',
 ];
+
+/// 解析职业属性公式计算职业点数
+/// [attr] 如 "教育×4" 或 "教育×2＋敏捷×2"
+/// 属性值通过 [attrs] map 传入，key 为中文属性名
+int calcOccupationPoints(String attr, Map<String, int> attrs) {
+  final parts = attr.split('＋');
+  int points = 0;
+  for (final part in parts) {
+    final trimmed = part.trim();
+    final match = RegExp(r'×(\d+)').firstMatch(trimmed);
+    final multiplier = match != null ? int.parse(match.group(1)!) : 0;
+    for (final entry in attrs.entries) {
+      if (trimmed.contains(entry.key)) {
+        points += entry.value * multiplier;
+        break;
+      }
+    }
+  }
+  return points;
+}
