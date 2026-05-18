@@ -20,6 +20,7 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
   final _descCtrl = TextEditingController();
   Occupation? _selectedOccupation;
   String? _apiKey;
+  int _providerIndex = 0;
 
   // phase: input -> loading1 -> preview1 -> loading2 -> preview2
   String _phase = 'input';
@@ -51,7 +52,10 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
   Future<void> _loadApiKey() async {
     final prefs = await SharedPreferences.getInstance();
     final appPref = AppPreferences(prefs);
-    setState(() => _apiKey = appPref.deepseekApiKey);
+    setState(() {
+      _providerIndex = appPref.aiProviderIndex;
+      _apiKey = _providerIndex == 0 ? appPref.getDeepseekApiKey() : appPref.getMimoApiKey();
+    });
   }
 
   @override
@@ -70,12 +74,14 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
     super.dispose();
   }
 
-  DeepSeekService? _getService() {
+  AiService? _getService() {
     if (_apiKey == null || _apiKey!.isEmpty) return null;
-    return DeepSeekService(apiKey: _apiKey!);
+    return AiService(apiKey: _apiKey!, provider: AiProvider.values[_providerIndex]);
   }
 
   Future<void> _generateStep1() async {
+    // 重新加载 API Key（从设置页返回后可能已更新）
+    await _loadApiKey();
     final service = _getService();
     if (service == null) {
       ScaffoldMessenger.of(context).showSnackBar(

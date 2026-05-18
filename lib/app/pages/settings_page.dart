@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../setting/app_pref.dart';
+import '../services/deepseek_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -10,25 +11,45 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final _apiKeyCtrl = TextEditingController();
+  int _providerIndex = 0;
+  final Map<int, TextEditingController> _apiKeyCtrls = {
+    0: TextEditingController(),
+    1: TextEditingController(),
+  };
   bool _obscureKey = true;
 
   @override
   void initState() {
     super.initState();
-    _loadApiKey();
+    _loadSettings();
   }
 
-  Future<void> _loadApiKey() async {
+  Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     final appPref = AppPreferences(prefs);
-    _apiKeyCtrl.text = appPref.deepseekApiKey;
+    setState(() {
+      _providerIndex = appPref.aiProviderIndex;
+      _apiKeyCtrls[0]!.text = appPref.getDeepseekApiKey();
+      _apiKeyCtrls[1]!.text = appPref.getMimoApiKey();
+    });
+  }
+
+  Future<void> _saveProvider(int index) async {
+    final prefs = await SharedPreferences.getInstance();
+    final appPref = AppPreferences(prefs);
+    await appPref.setAiProviderIndex(index);
+    setState(() => _providerIndex = index);
   }
 
   Future<void> _saveApiKey() async {
     final prefs = await SharedPreferences.getInstance();
     final appPref = AppPreferences(prefs);
-    await appPref.setDeepseekApiKey(_apiKeyCtrl.text.trim());
+    final key = _apiKeyCtrls[_providerIndex]!.text.trim();
+    if (_providerIndex == 0) {
+      await appPref.setDeepseekApiKey(key);
+    } else {
+      await appPref.setMimoApiKey(key);
+    }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('API Key 已保存')),
@@ -38,16 +59,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   void dispose() {
-    _apiKeyCtrl.dispose();
+    for (final c in _apiKeyCtrls.values) c.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('设置'),
-      ),
+      appBar: AppBar(title: const Text('设置')),
       body: ListView(
         children: [
           ListTile(
@@ -94,21 +113,13 @@ class _SettingsPageState extends State<SettingsPage> {
                 context: context,
                 builder: (context) => AlertDialog(
                   title: const Text('确认清除'),
-                  content: const Text(
-                    '确定要清除所有数据吗？此操作不可恢复。',
-                    style: TextStyle(color: Colors.red),
-                  ),
+                  content: const Text('确定要清除所有数据吗？此操作不可恢复。', style: TextStyle(color: Colors.red)),
                   actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('取消'),
-                    ),
+                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
                     ElevatedButton(
                       onPressed: () {
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('清除数据功能开发中')),
-                        );
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('清除数据功能开发中')));
                       },
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                       child: const Text('确认清除'),
@@ -123,16 +134,38 @@ class _SettingsPageState extends State<SettingsPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Text('AI 设置', style: Theme.of(context).textTheme.titleSmall),
           ),
+          // Provider selection
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: AiProvider.values.asMap().entries.map((e) {
+                final idx = e.key;
+                final p = e.value;
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: idx < AiProvider.values.length - 1 ? 8 : 0),
+                    child: ChoiceChip(
+                      label: SizedBox(width: double.infinity, child: Text(p.label, textAlign: TextAlign.center)),
+                      selected: _providerIndex == idx,
+                      onSelected: (_) => _saveProvider(idx),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // API Key input
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
-                    controller: _apiKeyCtrl,
+                    controller: _apiKeyCtrls[_providerIndex],
                     obscureText: _obscureKey,
                     decoration: InputDecoration(
-                      labelText: 'DeepSeek API Key',
+                      labelText: '${AiProvider.values[_providerIndex].label} API Key',
                       hintText: 'sk-...',
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
@@ -143,10 +176,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _saveApiKey,
-                  child: const Text('保存'),
-                ),
+                ElevatedButton(onPressed: _saveApiKey, child: const Text('保存')),
               ],
             ),
           ),

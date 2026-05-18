@@ -4,6 +4,16 @@ import '../data/skill.dart';
 import '../data/coc_data.dart';
 import '../data/character.dart';
 
+enum AiProvider {
+  deepseek('DeepSeek', 'https://api.deepseek.com/chat/completions', 'deepseek-chat'),
+  mimo('小米 MiMo', 'https://token-plan-cn.xiaomimimo.com/v1/chat/completions', 'mimo-7b');
+
+  final String label;
+  final String url;
+  final String model;
+  const AiProvider(this.label, this.url, this.model);
+}
+
 class SkillAlloc {
   final int occ;
   final int interest;
@@ -47,12 +57,12 @@ class Step2Result {
   }) : items = items ?? [];
 }
 
-class DeepSeekService {
+class AiService {
   final String apiKey;
-  static const _url = 'https://api.deepseek.com/chat/completions';
+  final AiProvider provider;
   static const _maxRetries = 3;
 
-  DeepSeekService({required this.apiKey});
+  AiService({required this.apiKey, this.provider = AiProvider.deepseek});
 
   Future<Step1Result> generateStep1(String description, String? occupation) async {
     final systemPrompt = _buildStep1SystemPrompt();
@@ -90,13 +100,13 @@ class DeepSeekService {
 
   Future<String> _callApi(String systemPrompt, String userPrompt) async {
     final resp = await http.post(
-      Uri.parse(_url),
+      Uri.parse(provider.url),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $apiKey',
       },
       body: jsonEncode({
-        'model': 'deepseek-chat',
+        'model': provider.model,
         'temperature': 0.7,
         'messages': [
           {'role': 'system', 'content': systemPrompt},
@@ -140,7 +150,6 @@ class DeepSeekService {
           interest: (val['int'] ?? 0) as int,
         );
       } else if (val is int) {
-        // 兼容 AI 直接返回数值的情况
         skills[entry.key] = SkillAlloc(occ: val, interest: 0);
       }
     }
@@ -188,39 +197,27 @@ class DeepSeekService {
   }
 
   bool _validateStep1(Step1Result result) {
-    // 校验属性值
     for (final v in result.attributes.values) {
       if (v < 40 || v > 90 || v % 5 != 0) return false;
     }
-
-    // 校验技能名是否在 SKILL_DEFS 中
     for (final skillName in result.skills.keys) {
-      if (skillName == '母语') continue; // 母语特殊处理
+      if (skillName == '母语') continue;
       final def = SKILL_DEFS.where((s) => s.key == skillName).firstOrNull;
       if (def == null) return false;
     }
-
-    // 校验点数不超限
     final intAttr = result.attributes['int'] ?? 50;
     final interestTotal = intAttr * 2;
-
     int intSpent = 0;
     for (final alloc in result.skills.values) {
       if (alloc.occ < 0 || alloc.interest < 0) return false;
       intSpent += alloc.interest;
     }
-
-    // 兴趣点不能超限（职业点需要职业公式计算，这里只校验兴趣点）
     if (intSpent > interestTotal) return false;
-
     return true;
   }
 
   String _buildStep1SystemPrompt() {
-    // 构建技能列表字符串
     final skillList = SKILL_DEFS.map((s) => '${s.key}|${s.baseHalf}').join(', ');
-
-    // 构建职业列表字符串
     final occList = OCCUPATIONS.map((o) => '${o.id}|${o.n}|${o.attr}|${o.min}-${o.max}').join('\n');
 
     return '''你是克苏鲁的呼唤（COC）第七版 TRPG 的角色创建助手。你必须严格遵守 COC 7e 规则。
