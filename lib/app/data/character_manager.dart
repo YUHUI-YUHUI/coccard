@@ -285,6 +285,40 @@ class CharacterManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateAppearance(String appearance) {
+    character.appearance = appearance;
+    _saveCharacters();
+    notifyListeners();
+  }
+
+  void updateItems(List<CharacterItem> items) {
+    character.items = items;
+    _saveCharacters();
+    notifyListeners();
+  }
+
+  void addItem(CharacterItem item) {
+    character.items.add(item);
+    _saveCharacters();
+    notifyListeners();
+  }
+
+  void updateItem(int index, CharacterItem item) {
+    if (index >= 0 && index < character.items.length) {
+      character.items[index] = item;
+      _saveCharacters();
+      notifyListeners();
+    }
+  }
+
+  void deleteItem(int index) {
+    if (index >= 0 && index < character.items.length) {
+      character.items.removeAt(index);
+      _saveCharacters();
+      notifyListeners();
+    }
+  }
+
   void updateFinance({int? cash, int? spending, int? assets}) {
     final c = character;
     if (cash != null) c.cash = cash;

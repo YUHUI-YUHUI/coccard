@@ -75,6 +75,8 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 16),
                 _buildWeaponsCard(context, character),
                 const SizedBox(height: 16),
+                _buildItemsCard(context, character),
+                const SizedBox(height: 16),
                 _buildFinanceCard(context, character, manager),
                 const SizedBox(height: 16),
                 _buildBackstoryCard(context, character, manager),
@@ -110,6 +112,12 @@ class _HomePageState extends State<HomePage> {
             _infoRow('性别', character.gender),
             _infoRow('居住地', character.residence),
             _infoRow('出生地', character.birthplace),
+            if (character.appearance.isNotEmpty) ...[
+              const Divider(),
+              const Text('外貌', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(character.appearance),
+            ],
             const SizedBox(height: 8),
             ElevatedButton(
               onPressed: () => _showOccupationPicker(context, manager),
@@ -278,6 +286,28 @@ class _HomePageState extends State<HomePage> {
                 title: Text(w.name),
                 subtitle: Text('技能 ${w.skill}% | 伤害 ${w.damage}'),
               )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItemsCard(BuildContext context, Character character) {
+    if (character.items.isEmpty) return const SizedBox.shrink();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('背包物品', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Divider(),
+            ...character.items.map((item) => ListTile(
+              dense: true,
+              leading: const Icon(Icons.inventory_2_outlined, size: 20),
+              title: Text(item.name),
+              trailing: Text('x${item.count}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            )),
           ],
         ),
       ),

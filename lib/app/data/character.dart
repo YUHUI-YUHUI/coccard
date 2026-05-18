@@ -1,3 +1,18 @@
+class CharacterItem {
+  String name;
+  int count;
+  CharacterItem({this.name = '', this.count = 1});
+
+  Map<String, dynamic> toJson() => {'name': name, 'count': count};
+
+  factory CharacterItem.fromJson(Map<String, dynamic> json) {
+    return CharacterItem(
+      name: json['name'] ?? '',
+      count: json['count'] ?? 1,
+    );
+  }
+}
+
 class Character {
   int id;
   String name;
@@ -35,7 +50,9 @@ class Character {
 
   String? avatarUrl;
 
+  String appearance;
   List<CharacterWeapon> weapons;
+  List<CharacterItem> items;
   Map<String, int> skills;
   int luckDice;
 
@@ -79,10 +96,13 @@ class Character {
     this.spending = 0,
     this.assets = 0,
     this.avatarUrl,
+    this.appearance = '',
     List<CharacterWeapon>? weapons,
+    List<CharacterItem>? items,
     Map<String, int>? skills,
     this.luckDice = 3,
   })  : weapons = weapons ?? [],
+        items = items ?? [],
         skills = skills ?? {};
 
   Map<String, dynamic> toJson() {
@@ -126,7 +146,9 @@ class Character {
       'spending': spending,
       'assets': assets,
       'avatarUrl': avatarUrl,
+      'appearance': appearance,
       'weapons': weapons.map((w) => w.toJson()).toList(),
+      'items': items.map((i) => i.toJson()).toList(),
       'skills': skills,
       'luckDice': luckDice,
     };
@@ -173,9 +195,14 @@ class Character {
       spending: json['spending'] ?? 0,
       assets: json['assets'] ?? 0,
       avatarUrl: json['avatarUrl'],
+      appearance: json['appearance'] ?? '',
       luckDice: json['luckDice'] ?? 3,
       weapons: (json['weapons'] as List<dynamic>?)
               ?.map((w) => CharacterWeapon.fromJson(w))
+              .toList() ??
+          [],
+      items: (json['items'] as List<dynamic>?)
+              ?.map((i) => CharacterItem.fromJson(i))
               .toList() ??
           [],
       skills: (json['skills'] as Map<String, dynamic>?)?.map(

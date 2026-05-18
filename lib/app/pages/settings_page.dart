@@ -1,7 +1,46 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../setting/app_pref.dart';
 
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  final _apiKeyCtrl = TextEditingController();
+  bool _obscureKey = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadApiKey();
+  }
+
+  Future<void> _loadApiKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    final appPref = AppPreferences(prefs);
+    _apiKeyCtrl.text = appPref.deepseekApiKey;
+  }
+
+  Future<void> _saveApiKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    final appPref = AppPreferences(prefs);
+    await appPref.setDeepseekApiKey(_apiKeyCtrl.text.trim());
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('API Key 已保存')),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _apiKeyCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,6 +118,39 @@ class SettingsPage extends StatelessWidget {
               );
             },
           ),
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text('AI 设置', style: Theme.of(context).textTheme.titleSmall),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _apiKeyCtrl,
+                    obscureText: _obscureKey,
+                    decoration: InputDecoration(
+                      labelText: 'DeepSeek API Key',
+                      hintText: 'sk-...',
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscureKey ? Icons.visibility_off : Icons.visibility),
+                        onPressed: () => setState(() => _obscureKey = !_obscureKey),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _saveApiKey,
+                  child: const Text('保存'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
           const Divider(),
           const ListTile(
             leading: Icon(Icons.info),

@@ -11,6 +11,7 @@ import 'app/pages/about_page.dart';
 import 'app/pages/skill_page.dart';
 import 'app/pages/weapon_page.dart';
 import 'app/pages/reference_page.dart';
+import 'app/pages/ai_character_page.dart';
 import 'app/theme/app_theme.dart';
 
 void main() async {
@@ -48,6 +49,7 @@ class COCCharacterApp extends StatelessWidget {
         '/skills': (context) => const SkillPage(),
         '/weapons': (context) => const WeaponPage(),
         '/reference': (context) => const ReferencePage(),
+        '/ai_character': (context) => const AiCharacterPage(),
       },
     );
   }

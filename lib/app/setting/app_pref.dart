@@ -16,7 +16,12 @@ class AppPreferences {
     await _prefs.setInt(_lastCharacterIdKey, id);
   }
 
-  // 可以添加其他设置相关的方法
-  // Future<void> saveThemeMode(String mode) async {...}
-  // String? getThemeMode() {...}
+  // DeepSeek API Key
+  static const String _deepseekApiKeyKey = 'deepseek_api_key';
+
+  String get deepseekApiKey => _prefs.getString(_deepseekApiKeyKey) ?? '';
+
+  Future<void> setDeepseekApiKey(String key) async {
+    await _prefs.setString(_deepseekApiKeyKey, key);
+  }
 }
