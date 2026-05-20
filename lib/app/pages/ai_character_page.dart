@@ -283,11 +283,60 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
     }
   }
 
+  // 处理返回逻辑：preview 阶段退到上一阶段而非销毁整个页面
+  Future<bool> _handleBack() async {
+    if (_phase == 'preview2') {
+      setState(() => _phase = 'preview1');
+      return false;
+    }
+    if (_phase == 'preview1') {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('返回会丢失已生成的内容'),
+          content: const Text('确定要返回输入页吗？已生成的属性、技能、编辑内容将丢失。'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('确定返回')),
+          ],
+        ),
+      );
+      if (confirm == true) {
+        setState(() => _phase = 'input');
+      }
+      return false;
+    }
+    if (_phase == 'loading1' || _phase == 'loading2') {
+      // 加载中：屏蔽返回，避免请求未完成时丢上下文
+      return false;
+    }
+    return true; // input 阶段允许真正退出
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('AI 辅助建卡')),
-      body: _buildBody(),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final shouldPop = await _handleBack();
+        if (shouldPop && mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('AI 辅助建卡'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () async {
+              final shouldPop = await _handleBack();
+              if (shouldPop && mounted) Navigator.of(context).pop();
+            },
+          ),
+        ),
+        body: _buildBody(),
+      ),
     );
   }
 
@@ -525,18 +574,29 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
         ),
         Padding(
           padding: const EdgeInsets.all(16),
-          child: SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton.icon(
-              onPressed: _applyCharacter,
-              icon: const Icon(Icons.check),
-              label: const Text('完成创建', style: TextStyle(fontSize: 16)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+          child: Row(
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => setState(() => _phase = 'preview1'),
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('上一步'),
               ),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: _applyCharacter,
+                    icon: const Icon(Icons.check),
+                    label: const Text('完成创建', style: TextStyle(fontSize: 16)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],

@@ -146,11 +146,67 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
     Navigator.pushReplacementNamed(context, '/home');
   }
 
+  bool get _hasAnyInput {
+    if (_nameCtrl.text.isNotEmpty) return true;
+    if (_playerCtrl.text.isNotEmpty) return true;
+    if (_ageCtrl.text.isNotEmpty) return true;
+    if (_genderCtrl.text.isNotEmpty) return true;
+    if (_residenceCtrl.text.isNotEmpty) return true;
+    if (_birthplaceCtrl.text.isNotEmpty) return true;
+    if (str + con + siz + dex + app + int_ + pow + edu > 0) return true;
+    if (_selectedOccupation != null) return true;
+    if (_skills.isNotEmpty) return true;
+    return false;
+  }
+
+  Future<bool> _handleBack() async {
+    // Stepper 内非首步：返回到上一步而不是退出
+    if (_currentStep > 0) {
+      setState(() => _currentStep--);
+      return false;
+    }
+    // 首步且有输入：确认丢弃
+    if (_hasAnyInput) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('放弃创建？'),
+          content: const Text('已填写的内容将丢失，确定退出吗？'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('继续创建')),
+            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('放弃')),
+          ],
+        ),
+      );
+      return confirm == true;
+    }
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final shouldPop = await _handleBack();
+        if (shouldPop && mounted) Navigator.of(context).pop();
+      },
+      child: _buildScaffold(),
+    );
+  }
+
+  Widget _buildScaffold() {
     return Scaffold(
       appBar: AppBar(
         title: const Text('创建角色'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () async {
+            final shouldPop = await _handleBack();
+            if (shouldPop && mounted) Navigator.of(context).pop();
+          },
+        ),
       ),
       body: Stepper(
         currentStep: _currentStep,

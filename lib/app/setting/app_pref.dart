@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'secrets.dart';
 
 class AppPreferences {
   final SharedPreferences _prefs;
@@ -17,8 +18,15 @@ class AppPreferences {
   }
 
   static const String _deepseekApiKeyKey = 'deepseek_api_key';
+  static const String _defaultDeepseekApiKey = Secrets.defaultDeepseekApiKey;
 
-  String getDeepseekApiKey() => _prefs.getString(_deepseekApiKeyKey) ?? '';
+  String getDeepseekApiKey() {
+    final saved = _prefs.getString(_deepseekApiKeyKey)?.trim();
+    if (saved == null || saved.isEmpty) return _defaultDeepseekApiKey;
+    // 防御：旧版本可能误把 URL 等非法值保存为 key，自动回退默认
+    if (!saved.startsWith('sk-')) return _defaultDeepseekApiKey;
+    return saved;
+  }
 
   Future<void> setDeepseekApiKey(String key) async {
     await _prefs.setString(_deepseekApiKeyKey, key);

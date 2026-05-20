@@ -17,3 +17,7 @@ coccard-release.apk
 assets/Noto_Sans_SC/OFL.txt
 assets/Noto_Sans_SC/README.txt
 CLAUDE.md
+
+# Secrets (API keys, etc.) — see secrets.dart.example for template
+lib/app/setting/secrets.dart
+!lib/app/setting/secrets.dart.example
