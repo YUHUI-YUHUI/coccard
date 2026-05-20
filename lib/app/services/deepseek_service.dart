@@ -75,12 +75,12 @@ class AiService {
         final result = _parseStep1Response(response);
         final valid = _validateStep1(result);
         if (valid) return result;
-        lastError = Exception('生成数据校验失败，正在重试...');
+        lastError = Exception('生成数据校验失败');
       } catch (e) {
         lastError = e is Exception ? e : Exception(e.toString());
       }
     }
-    throw lastError ?? Exception('生成失败');
+    throw lastError ?? Exception('生成失败，已重试 $_maxRetries 次');
   }
 
   Future<Step2Result> generateStep2(String description, Step1Result step1) async {
@@ -131,7 +131,7 @@ class AiService {
     if (braceStart >= 0 && braceEnd > braceStart) {
       return response.substring(braceStart, braceEnd + 1);
     }
-    return response;
+    throw Exception('AI 未返回有效的 JSON 数据，请重试');
   }
 
   Step1Result _parseStep1Response(String response) {
@@ -146,11 +146,11 @@ class AiService {
       final val = entry.value;
       if (val is Map) {
         skills[entry.key] = SkillAlloc(
-          occ: (val['occ'] ?? 0) as int,
-          interest: (val['int'] ?? 0) as int,
+          occ: (val['occ'] as num? ?? 0).toInt(),
+          interest: (val['int'] as num? ?? 0).toInt(),
         );
-      } else if (val is int) {
-        skills[entry.key] = SkillAlloc(occ: val, interest: 0);
+      } else if (val is num) {
+        skills[entry.key] = SkillAlloc(occ: val.toInt(), interest: 0);
       }
     }
 
@@ -161,16 +161,16 @@ class AiService {
       residence: (data['residence'] ?? '') as String,
       birthplace: (data['birthplace'] ?? '') as String,
       occupation: (data['occupation'] ?? '') as String,
-      occId: data['occId'] as int?,
+      occId: (data['occId'] as num?)?.toInt(),
       attributes: {
-        'str': (attrs['str'] ?? 50) as int,
-        'con': (attrs['con'] ?? 50) as int,
-        'siz': (attrs['siz'] ?? 50) as int,
-        'dex': (attrs['dex'] ?? 50) as int,
-        'app': (attrs['app'] ?? 50) as int,
-        'int': (attrs['int'] ?? 50) as int,
-        'pow': (attrs['pow'] ?? 50) as int,
-        'edu': (attrs['edu'] ?? 50) as int,
+        'str': (attrs['str'] as num? ?? 50).toInt(),
+        'con': (attrs['con'] as num? ?? 50).toInt(),
+        'siz': (attrs['siz'] as num? ?? 50).toInt(),
+        'dex': (attrs['dex'] as num? ?? 50).toInt(),
+        'app': (attrs['app'] as num? ?? 50).toInt(),
+        'int': (attrs['int'] as num? ?? 50).toInt(),
+        'pow': (attrs['pow'] as num? ?? 50).toInt(),
+        'edu': (attrs['edu'] as num? ?? 50).toInt(),
       },
       skills: skills,
     );
@@ -185,7 +185,7 @@ class AiService {
       final m = i as Map<String, dynamic>;
       return CharacterItem(
         name: (m['name'] ?? '') as String,
-        count: (m['count'] ?? 1) as int,
+        count: (m['count'] as num? ?? 1).toInt(),
       );
     }).toList();
 
@@ -207,12 +207,33 @@ class AiService {
     }
     final intAttr = result.attributes['int'] ?? 50;
     final interestTotal = intAttr * 2;
+    int occSpent = 0;
     int intSpent = 0;
     for (final alloc in result.skills.values) {
       if (alloc.occ < 0 || alloc.interest < 0) return false;
+      occSpent += alloc.occ;
       intSpent += alloc.interest;
     }
     if (intSpent > interestTotal) return false;
+
+    // 验证职业点不超支
+    if (result.occId != null) {
+      final occ = OCCUPATIONS.where((o) => o.id == result.occId).firstOrNull;
+      if (occ != null) {
+        final attrMap = {
+          '力量': result.attributes['str'] ?? 50,
+          '体质': result.attributes['con'] ?? 50,
+          '体型': result.attributes['siz'] ?? 50,
+          '敏捷': result.attributes['dex'] ?? 50,
+          '外貌': result.attributes['app'] ?? 50,
+          '智力': result.attributes['int'] ?? 50,
+          '意志': result.attributes['pow'] ?? 50,
+          '教育': result.attributes['edu'] ?? 50,
+        };
+        final occTotal = calcOccupationPoints(occ.attr, attrMap);
+        if (occSpent > occTotal) return false;
+      }
+    }
     return true;
   }
 

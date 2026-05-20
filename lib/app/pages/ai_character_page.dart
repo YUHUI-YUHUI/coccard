@@ -87,7 +87,7 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
     if (service == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('请先在设置页配置 DeepSeek API Key'),
+          content: Text('请先在设置页配置 ${AiProvider.values[_providerIndex].label} API Key'),
           action: SnackBarAction(label: '去设置', onPressed: () => Navigator.pushNamed(context, '/settings')),
         ),
       );
@@ -181,6 +181,8 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
   }
 
   Future<void> _generateStep2() async {
+    await _loadApiKey();
+    if (!mounted) return;
     final service = _getService();
     if (service == null) return;
 
