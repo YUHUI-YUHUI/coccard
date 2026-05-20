@@ -53,8 +53,8 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
     final prefs = await SharedPreferences.getInstance();
     final appPref = AppPreferences(prefs);
     setState(() {
-      _providerIndex = appPref.aiProviderIndex;
-      _apiKey = _providerIndex == 0 ? appPref.getDeepseekApiKey() : appPref.getMimoApiKey();
+      _providerIndex = appPref.aiProviderIndex.clamp(0, AiProvider.values.length - 1);
+      _apiKey = appPref.getDeepseekApiKey();
     });
   }
 
@@ -392,7 +392,7 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
     final occSpent = _getOccPointSpent();
     final intSpent = _getIntPointSpent();
     final occTotal = _getOccPointTotal();
-    intTotal = _getIntPointTotal();
+    final intTotal = _getIntPointTotal();
 
     return Column(
       children: [
@@ -443,8 +443,6 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
       ],
     );
   }
-
-  int intTotal = 0;
 
   Widget _buildPointSummary(int occSpent, int occTotal, int intSpent, int intTotal) {
     final occOk = occSpent <= occTotal;
