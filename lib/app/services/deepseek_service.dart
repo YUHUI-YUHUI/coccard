@@ -59,9 +59,11 @@ class Step2Result {
 class AiService {
   final String apiKey;
   final AiProvider provider;
+  final http.Client? _client;
   static const _maxRetries = 3;
 
-  AiService({required this.apiKey, this.provider = AiProvider.deepseek});
+  AiService({required this.apiKey, this.provider = AiProvider.deepseek, http.Client? client})
+      : _client = client;
 
   Future<Step1Result> generateStep1(String description, String? occupation) async {
     final systemPrompt = _buildStep1SystemPrompt();
@@ -98,7 +100,8 @@ class AiService {
   }
 
   Future<String> _callApi(String systemPrompt, String userPrompt) async {
-    final resp = await http.post(
+    final client = _client ?? http.Client();
+    final resp = await client.post(
       Uri.parse(provider.url),
       headers: {
         'Content-Type': 'application/json',

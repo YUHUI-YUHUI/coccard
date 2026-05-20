@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../setting/app_pref.dart';
-import '../services/deepseek_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -126,7 +125,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     controller: _apiKeyCtrl,
                     obscureText: _obscureKey,
                     decoration: InputDecoration(
-                      labelText: '${AiProvider.values.first.label} API Key',
+                      labelText: 'DeepSeek API Key',
                       hintText: 'sk-...',
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(

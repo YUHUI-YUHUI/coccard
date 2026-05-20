@@ -20,7 +20,6 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
   final _descCtrl = TextEditingController();
   Occupation? _selectedOccupation;
   String? _apiKey;
-  int _providerIndex = 0;
 
   // phase: input -> loading1 -> preview1 -> loading2 -> preview2
   String _phase = 'input';
@@ -53,7 +52,6 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
     final prefs = await SharedPreferences.getInstance();
     final appPref = AppPreferences(prefs);
     setState(() {
-      _providerIndex = appPref.aiProviderIndex.clamp(0, AiProvider.values.length - 1);
       _apiKey = appPref.getDeepseekApiKey();
     });
   }
@@ -76,7 +74,7 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
 
   AiService? _getService() {
     if (_apiKey == null || _apiKey!.isEmpty) return null;
-    return AiService(apiKey: _apiKey!, provider: AiProvider.values[_providerIndex]);
+    return AiService(apiKey: _apiKey!);
   }
 
   Future<void> _generateStep1() async {
@@ -87,7 +85,7 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
     if (service == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('请先在设置页配置 ${AiProvider.values[_providerIndex].label} API Key'),
+          content: const Text('请先在设置页配置 DeepSeek API Key'),
           action: SnackBarAction(label: '去设置', onPressed: () => Navigator.pushNamed(context, '/settings')),
         ),
       );
