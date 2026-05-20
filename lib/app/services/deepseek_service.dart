@@ -5,8 +5,7 @@ import '../data/coc_data.dart';
 import '../data/character.dart';
 
 enum AiProvider {
-  deepseek('DeepSeek', 'https://api.deepseek.com/chat/completions', 'deepseek-chat'),
-  mimo('小米 MiMo', 'https://token-plan-cn.xiaomimimo.com/v1/chat/completions', 'mimo-v2.5-pro');
+  deepseek('DeepSeek', 'https://api.deepseek.com/chat/completions', 'deepseek-chat');
 
   final String label;
   final String url;

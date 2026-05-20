@@ -11,11 +11,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  int _providerIndex = 0;
-  final Map<int, TextEditingController> _apiKeyCtrls = {
-    0: TextEditingController(),
-    1: TextEditingController(),
-  };
+  final TextEditingController _apiKeyCtrl = TextEditingController();
   bool _obscureKey = true;
 
   @override
@@ -28,28 +24,14 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs = await SharedPreferences.getInstance();
     final appPref = AppPreferences(prefs);
     setState(() {
-      _providerIndex = appPref.aiProviderIndex;
-      _apiKeyCtrls[0]!.text = appPref.getDeepseekApiKey();
-      _apiKeyCtrls[1]!.text = appPref.getMimoApiKey();
+      _apiKeyCtrl.text = appPref.getDeepseekApiKey();
     });
-  }
-
-  Future<void> _saveProvider(int index) async {
-    final prefs = await SharedPreferences.getInstance();
-    final appPref = AppPreferences(prefs);
-    await appPref.setAiProviderIndex(index);
-    setState(() => _providerIndex = index);
   }
 
   Future<void> _saveApiKey() async {
     final prefs = await SharedPreferences.getInstance();
     final appPref = AppPreferences(prefs);
-    final key = _apiKeyCtrls[_providerIndex]!.text.trim();
-    if (_providerIndex == 0) {
-      await appPref.setDeepseekApiKey(key);
-    } else {
-      await appPref.setMimoApiKey(key);
-    }
+    await appPref.setDeepseekApiKey(_apiKeyCtrl.text.trim());
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('API Key 已保存')),
@@ -59,7 +41,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   void dispose() {
-    for (final c in _apiKeyCtrls.values) c.dispose();
+    _apiKeyCtrl.dispose();
     super.dispose();
   }
 
@@ -134,27 +116,6 @@ class _SettingsPageState extends State<SettingsPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Text('AI 设置', style: Theme.of(context).textTheme.titleSmall),
           ),
-          // Provider selection
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: AiProvider.values.asMap().entries.map((e) {
-                final idx = e.key;
-                final p = e.value;
-                return Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(right: idx < AiProvider.values.length - 1 ? 8 : 0),
-                    child: ChoiceChip(
-                      label: SizedBox(width: double.infinity, child: Text(p.label, textAlign: TextAlign.center)),
-                      selected: _providerIndex == idx,
-                      onSelected: (_) => _saveProvider(idx),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 12),
           // API Key input
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -162,10 +123,10 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 Expanded(
                   child: TextField(
-                    controller: _apiKeyCtrls[_providerIndex],
+                    controller: _apiKeyCtrl,
                     obscureText: _obscureKey,
                     decoration: InputDecoration(
-                      labelText: '${AiProvider.values[_providerIndex].label} API Key',
+                      labelText: '${AiProvider.values.first.label} API Key',
                       hintText: 'sk-...',
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
