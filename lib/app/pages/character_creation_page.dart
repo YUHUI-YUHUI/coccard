@@ -112,6 +112,7 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
     final manager = context.read<CharacterManager>();
 
     await manager.createNewCharacter();
+    if (!mounted) return;
     final c = manager.character;
 
     // 填入基本信息

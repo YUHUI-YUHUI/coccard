@@ -82,6 +82,7 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
   Future<void> _generateStep1() async {
     // 重新加载 API Key（从设置页返回后可能已更新）
     await _loadApiKey();
+    if (!mounted) return;
     final service = _getService();
     if (service == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -110,6 +111,7 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
         _descCtrl.text.trim(),
         _selectedOccupation?.n,
       );
+      if (!mounted) return;
       _initStep1Editors(result);
       setState(() => _phase = 'preview1');
     } catch (e) {
@@ -200,6 +202,7 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
 
     try {
       final result = await service.generateStep2(_descCtrl.text.trim(), _step1!);
+      if (!mounted) return;
       _backstoryCtrl.text = result.backstory;
       _appearanceCtrl.text = result.appearance;
       _items = result.items.map((i) => _EditableItem(
