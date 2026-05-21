@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -5,6 +6,7 @@ import '../data/character.dart';
 import '../data/character_manager.dart';
 import '../data/coc_data.dart';
 import '../data/skill.dart';
+import '../data/allocation_rule.dart';
 import '../services/deepseek_service.dart';
 import '../setting/app_pref.dart';
 
@@ -21,10 +23,20 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
   Occupation? _selectedOccupation;
   String? _apiKey;
 
-  // phase: input -> loading1 -> preview1 -> loading2 -> preview2
+  // phase: input -> destinySelect (天命模式) -> loading1 -> preview1 -> loading2 -> preview2
   String _phase = 'input';
   String _loadingText = '';
   String? _error;
+
+  // 属性分配规则
+  AllocationRule _allocRule = AllocationRule.defaultRule;
+  final TextEditingController _destinyGroupsCtrl = TextEditingController(text: '3');
+  final TextEditingController _pointBuyTotalCtrl = TextEditingController(text: '480');
+  // 天命候选与选择
+  List<Map<String, int>> _destinyCandidates = [];
+  int _destinyPicked = -1;
+  // 单独投出的运气（不含运模式）
+  int _separateLuck = 0;
 
   // step1 results (editable)
   Step1Result? _step1;
@@ -69,6 +81,8 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
     for (final c in _attrCtrls.values) c.dispose();
     for (final c in _skillOccCtrls.values) c.dispose();
     for (final c in _skillIntCtrls.values) c.dispose();
+    _destinyGroupsCtrl.dispose();
+    _pointBuyTotalCtrl.dispose();
     super.dispose();
   }
 
@@ -77,8 +91,7 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
     return AiService(apiKey: _apiKey!);
   }
 
-  Future<void> _generateStep1() async {
-    // 重新加载 API Key（从设置页返回后可能已更新）
+  Future<void> _onGeneratePressed() async {
     await _loadApiKey();
     if (!mounted) return;
     final service = _getService();
@@ -97,10 +110,61 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
       );
       return;
     }
+    // 解析描述中的规则；未匹配则使用当前 _allocRule（默认 480 购点不含运）
+    final parsed = AllocationRule.parseFromDescription(_descCtrl.text);
+    if (parsed != null) {
+      setState(() {
+        _allocRule = parsed;
+        _destinyGroupsCtrl.text = parsed.destinyGroups.toString();
+        _pointBuyTotalCtrl.text = parsed.pointBuyTotal.toString();
+      });
+    }
+
+    // 始终先本地骰一次运气作为默认（destiny+含运 时会被选中的组覆盖）
+    _separateLuck = CocDice.rollLuck(Random());
+
+    if (_allocRule.method == AllocationMethod.destiny) {
+      // 天命：本地骰 N 组，进入选择阶段
+      final r = Random();
+      setState(() {
+        _destinyCandidates = List.generate(
+          _allocRule.destinyGroups,
+          (_) => CocDice.rollAttributeSet(r, includeLuck: _allocRule.includeLuck),
+        );
+        _destinyPicked = -1;
+        _phase = 'destinySelect';
+        _error = null;
+      });
+    } else {
+      // 购点：直接交给 AI 生成
+      await _runStep1Generation(fixedAttrs: null);
+    }
+  }
+
+  Future<void> _confirmDestinyAndGenerate() async {
+    if (_destinyPicked < 0) return;
+    final chosen = _destinyCandidates[_destinyPicked];
+    if (chosen.containsKey('luck')) {
+      _separateLuck = chosen['luck']!;
+    }
+    // 把 9 元转 8 元供 AI 用（不传 luck）
+    final fixedAttrs = <String, int>{
+      'str': chosen['str']!, 'con': chosen['con']!, 'siz': chosen['siz']!,
+      'dex': chosen['dex']!, 'app': chosen['app']!, 'int': chosen['int']!,
+      'pow': chosen['pow']!, 'edu': chosen['edu']!,
+    };
+    await _runStep1Generation(fixedAttrs: fixedAttrs);
+  }
+
+  Future<void> _runStep1Generation({Map<String, int>? fixedAttrs}) async {
+    final service = _getService();
+    if (service == null) return;
 
     setState(() {
       _phase = 'loading1';
-      _loadingText = 'AI 正在生成属性与技能...';
+      _loadingText = fixedAttrs != null
+          ? 'AI 正在基于已选属性匹配职业与技能...'
+          : 'AI 正在生成属性与技能...';
       _error = null;
     });
 
@@ -108,13 +172,15 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
       final result = await service.generateStep1(
         _descCtrl.text.trim(),
         _selectedOccupation?.n,
+        rule: _allocRule,
+        fixedAttributes: fixedAttrs,
       );
       if (!mounted) return;
       _initStep1Editors(result);
       setState(() => _phase = 'preview1');
     } catch (e) {
       setState(() {
-        _phase = 'input';
+        _phase = fixedAttrs != null ? 'destinySelect' : 'input';
         _error = e.toString();
       });
       if (mounted) {
@@ -233,6 +299,10 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
     c.residence = _residenceCtrl.text;
     c.birthplace = _birthplaceCtrl.text;
 
+    // 运气：天命/不含运用 _separateLuck；含运情况下 AI 不返回 luck，仍用 _separateLuck（含运时由用户在 destinySelect 选择时写入）
+    if (_separateLuck > 0) {
+      c.luck = _separateLuck;
+    }
     // 属性
     manager.setAttributes(
       str: _getAttr('str'), con: _getAttr('con'), siz: _getAttr('siz'),
@@ -287,6 +357,14 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
   Future<bool> _handleBack() async {
     if (_phase == 'preview2') {
       setState(() => _phase = 'preview1');
+      return false;
+    }
+    if (_phase == 'destinySelect') {
+      setState(() {
+        _phase = 'input';
+        _destinyCandidates = [];
+        _destinyPicked = -1;
+      });
       return false;
     }
     if (_phase == 'preview1') {
@@ -345,6 +423,8 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
       case 'loading1':
       case 'loading2':
         return _buildLoading();
+      case 'destinySelect':
+        return _buildDestinySelect();
       case 'preview1':
         return _buildPreview1();
       case 'preview2':
@@ -417,11 +497,13 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
               padding: const EdgeInsets.only(bottom: 16),
               child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ),
+          _buildRuleEditor(),
+          const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             height: 52,
             child: ElevatedButton.icon(
-              onPressed: _generateStep1,
+              onPressed: _onGeneratePressed,
               icon: const Icon(Icons.auto_awesome),
               label: const Text('生成属性与技能', style: TextStyle(fontSize: 16)),
               style: ElevatedButton.styleFrom(
@@ -432,6 +514,217 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildRuleEditor() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('属性分配规则', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(width: 8),
+              Text(
+                '（描述中含"天命N"/"X购点"会自动覆盖）',
+                style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SegmentedButton<AllocationMethod>(
+            segments: const [
+              ButtonSegment(value: AllocationMethod.destiny, label: Text('天命'), icon: Icon(Icons.casino, size: 16)),
+              ButtonSegment(value: AllocationMethod.pointBuy, label: Text('购点'), icon: Icon(Icons.tune, size: 16)),
+            ],
+            selected: {_allocRule.method},
+            onSelectionChanged: (s) => setState(() => _allocRule = _allocRule.copyWith(method: s.first)),
+            style: const ButtonStyle(visualDensity: VisualDensity.compact),
+          ),
+          const SizedBox(height: 8),
+          if (_allocRule.method == AllocationMethod.destiny)
+            Row(
+              children: [
+                const Text('组数 N: '),
+                SizedBox(
+                  width: 60,
+                  child: TextField(
+                    controller: _destinyGroupsCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(isDense: true),
+                    onChanged: (v) {
+                      final n = int.tryParse(v) ?? 3;
+                      setState(() => _allocRule = _allocRule.copyWith(destinyGroups: n.clamp(1, 10)));
+                    },
+                  ),
+                ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                const Text('总点数 X: '),
+                SizedBox(
+                  width: 80,
+                  child: TextField(
+                    controller: _pointBuyTotalCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(isDense: true),
+                    onChanged: (v) {
+                      final x = int.tryParse(v) ?? 480;
+                      setState(() => _allocRule = _allocRule.copyWith(pointBuyTotal: x.clamp(40, 900)));
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text('单项 ${AllocationRule.perAttributeMin}-${AllocationRule.perAttributeMax}',
+                    style: const TextStyle(fontSize: 12)),
+              ],
+            ),
+          Row(
+            children: [
+              const Text('含运: '),
+              Switch(
+                value: _allocRule.includeLuck,
+                onChanged: (v) => setState(() => _allocRule = _allocRule.copyWith(includeLuck: v)),
+              ),
+              Expanded(
+                child: Text(
+                  _allocRule.includeLuck ? '运气参与分配' : '运气单独 3D6×5',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDestinySelect() {
+    final keys = _allocRule.includeLuck
+        ? ['str', 'con', 'siz', 'dex', 'app', 'int', 'pow', 'edu', 'luck']
+        : ['str', 'con', 'siz', 'dex', 'app', 'int', 'pow', 'edu'];
+    final labels = {
+      'str': 'STR', 'con': 'CON', 'siz': 'SIZ', 'dex': 'DEX',
+      'app': 'APP', 'int': 'INT', 'pow': 'POW', 'edu': 'EDU', 'luck': 'LUCK',
+    };
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_allocRule.label, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 4),
+              Text(
+                '从下方 ${_destinyCandidates.length} 组中挑选一组作为角色属性',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+              if (!_allocRule.includeLuck && _separateLuck > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text('运气（单独投出）: $_separateLuck',
+                      style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.tertiary)),
+                ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: List.generate(_destinyCandidates.length, (i) {
+                final g = _destinyCandidates[i];
+                final selected = _destinyPicked == i;
+                final sum = keys.fold<int>(0, (s, k) => s + (g[k] ?? 0));
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: InkWell(
+                    onTap: () => setState(() => _destinyPicked = i),
+                    child: Container(
+                      width: 110,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: selected
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.outlineVariant,
+                          width: selected ? 2 : 1,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        color: selected ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3) : null,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text('第 ${i + 1} 组',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 6),
+                          ...keys.map((k) => Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(labels[k]!, style: const TextStyle(fontSize: 11)),
+                                  Text('${g[k]}',
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                                ],
+                              )),
+                          const Divider(height: 10),
+                          Text('合计 $sum',
+                              style: const TextStyle(fontSize: 11), textAlign: TextAlign.end),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              OutlinedButton.icon(
+                onPressed: () {
+                  final r = Random();
+                  setState(() {
+                    _destinyCandidates = List.generate(
+                      _allocRule.destinyGroups,
+                      (_) => CocDice.rollAttributeSet(r, includeLuck: _allocRule.includeLuck),
+                    );
+                    _destinyPicked = -1;
+                  });
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('重新投骰'),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: _destinyPicked >= 0 ? _confirmDestinyAndGenerate : null,
+                    icon: const Icon(Icons.auto_awesome),
+                    label: const Text('确定并生成职业/技能'),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

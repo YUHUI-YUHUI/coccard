@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../data/skill.dart';
 import '../data/coc_data.dart';
 import '../data/character.dart';
+import '../data/allocation_rule.dart';
 
 enum AiProvider {
   deepseek('DeepSeek', 'https://api.deepseek.com/chat/completions', 'deepseek-chat');
@@ -65,18 +66,34 @@ class AiService {
   AiService({required this.apiKey, this.provider = AiProvider.deepseek, http.Client? client})
       : _client = client;
 
-  Future<Step1Result> generateStep1(String description, String? occupation) async {
-    final systemPrompt = _buildStep1SystemPrompt();
-    final userPrompt = _buildStep1UserPrompt(description, occupation);
+  /// 生成 Step1：属性 + 职业 + 技能。
+  /// - [rule] 决定属性约束（天命/购点）。
+  /// - [fixedAttributes] 若非空，AI 不再生成属性，而是基于这组固定属性补完其余字段。
+  ///   主要用于天命模式（属性本地骰好后让 AI 仅做职业/技能匹配）。
+  Future<Step1Result> generateStep1(
+    String description,
+    String? occupation, {
+    AllocationRule? rule,
+    Map<String, int>? fixedAttributes,
+  }) async {
+    final effectiveRule = rule ?? AllocationRule.defaultRule;
+    final systemPrompt = _buildStep1SystemPrompt(effectiveRule, fixedAttributes);
+    final userPrompt = _buildStep1UserPrompt(description, occupation, effectiveRule, fixedAttributes);
+    // 仅当调用方显式传入规则时才强制规则约束（保持向后兼容）
+    final enforceRule = rule != null;
 
     Exception? lastError;
     for (int attempt = 0; attempt < _maxRetries; attempt++) {
       try {
         final response = await _callApi(systemPrompt, userPrompt);
-        final result = _parseStep1Response(response);
-        final valid = _validateStep1(result);
+        var result = _parseStep1Response(response);
+        // 固定属性模式：忽略 AI 返回的 attributes，强制使用调用方提供的
+        if (fixedAttributes != null) {
+          result.attributes = Map.of(fixedAttributes);
+        }
+        final valid = _validateStep1(result, effectiveRule, enforceRule: enforceRule);
         if (valid) return result;
-        lastError = Exception('生成数据校验失败');
+        lastError = Exception('生成数据校验失败（属性或技能点未满足规则）');
       } catch (e) {
         lastError = e is Exception ? e : Exception(e.toString());
       }
@@ -198,9 +215,14 @@ class AiService {
     );
   }
 
-  bool _validateStep1(Step1Result result) {
+  bool _validateStep1(Step1Result result, AllocationRule rule, {bool enforceRule = true}) {
     for (final v in result.attributes.values) {
-      if (v < 40 || v > 90 || v % 5 != 0) return false;
+      if (v < AllocationRule.perAttributeMin || v > AllocationRule.perAttributeMax || v % 5 != 0) return false;
+    }
+    // 购点模式：校验合计严格等于总额（仅当显式指定规则时才检查）
+    if (enforceRule && rule.method == AllocationMethod.pointBuy) {
+      final sum = result.attributes.values.fold<int>(0, (a, b) => a + b);
+      if (sum != rule.pointBuyTotal) return false;
     }
     for (final skillName in result.skills.keys) {
       if (skillName == '母语') continue;
@@ -239,17 +261,30 @@ class AiService {
     return true;
   }
 
-  String _buildStep1SystemPrompt() {
+  String _buildStep1SystemPrompt(AllocationRule rule, Map<String, int>? fixed) {
     final skillList = SKILL_DEFS.map((s) => '${s.key}|${s.baseHalf}').join(', ');
     final occList = OCCUPATIONS.map((o) => '${o.id}|${o.n}|${o.attr}|${o.min}-${o.max}').join('\n');
+
+    final attrRuleSection = fixed != null
+        ? '''## 属性已固定（不要修改）
+属性值由系统投骰给定，你在 JSON 中可以原样回填，但禁止改动：
+str=${fixed['str']} con=${fixed['con']} siz=${fixed['siz']} dex=${fixed['dex']} app=${fixed['app']} int=${fixed['int']} pow=${fixed['pow']} edu=${fixed['edu']}
+后续职业匹配、技能分配都必须基于以上数值。'''
+        : (rule.method == AllocationMethod.pointBuy
+            ? '''## 属性规则（购点 ${rule.pointBuyTotal} 不含运）
+- 8 项属性：力量(str)、体质(con)、体型(siz)、敏捷(dex)、外貌(app)、智力(int)、意志(pow)、教育(edu)
+- 每项属性必须是 5 的倍数，范围 ${AllocationRule.perAttributeMin}-${AllocationRule.perAttributeMax}
+- **8 项属性合计必须严格等于 ${rule.pointBuyTotal}**（请输出前自检）
+- 运气不由你生成，由系统单独投骰，不要写入 JSON
+- 分配应符合角色描述：例如学者类的 INT/EDU 应偏高，战斗类的 STR/CON 应偏高'''
+            : '''## 属性规则
+- 8 项属性：力量(str)、体质(con)、体型(siz)、敏捷(dex)、外貌(app)、智力(int)、意志(pow)、教育(edu)
+- 每项属性必须是 5 的倍数，范围 ${AllocationRule.perAttributeMin}-${AllocationRule.perAttributeMax}''');
 
     return '''你是克苏鲁的呼唤（COC）第七版 TRPG 的角色创建助手。你必须严格遵守 COC 7e 规则。
 你的回复必须是一个合法的 JSON 对象，不要包含任何其他文字、解释或 markdown 标记。
 
-## 属性规则
-- 8 项属性：力量(str)、体质(con)、体型(siz)、敏捷(dex)、外貌(app)、智力(int)、意志(pow)、教育(edu)
-- 每项属性值必须是 5 的倍数，范围 40-90
-- 标准生成方式为 3D6×5（3个六面骰之和乘以5）
+$attrRuleSection
 
 ## 技能规则
 - 技能值 = 基础值 + 职业点投入 + 兴趣点投入
@@ -258,6 +293,19 @@ class AiService {
 - 职业点总投入不能超过职业点总额
 - 兴趣点总投入不能超过兴趣点总额
 - 每项技能的职业点投入和兴趣点投入都必须 ≥ 0
+
+## 重要：必须用完技能点
+- 你**必须把职业点总额全部分配完**，且**必须把兴趣点总额全部分配完**（occ 总和 = 职业点总额，int 总和 = 兴趣点总额）。
+- 不允许剩余职业点或兴趣点，剩余 1 点都不行。
+- 分配建议：
+  - 职业点应优先重点投入职业相关技能（参考职业列表中的技能集），把核心技能拉到 70-90%。
+  - 兴趣点用于补强职业技能或扩展角色背景相关的非职业技能（爱好、副业、经历）。
+  - 单项技能合计（基础值+职业点+兴趣点）不要超过 90%。
+  - 如果还有零散点数无处可放，分散投入到符合角色背景的杂项技能（如"聆听"、"侦查"、"图书馆使用"、"心理学"、"急救"等通用技能）。
+- 输出前请自检：
+  1. 把所有 skills 的 occ 字段相加，结果必须**等于**职业点总额。
+  2. 把所有 skills 的 int 字段相加，结果必须**等于**兴趣点总额。
+  3. 若不相等，调整后再输出。
 
 ## 可用技能列表（技能名|基础值）
 $skillList
@@ -288,11 +336,15 @@ skills 中的技能名必须与上方技能列表完全一致。至少分配 10 
 请将"母语"包含在 skills 中，其 occ 和 int 都设为 0。''';
   }
 
-  String _buildStep1UserPrompt(String description, String? occupation) {
+  String _buildStep1UserPrompt(
+      String description, String? occupation, AllocationRule rule, Map<String, int>? fixed) {
     final occHint = occupation != null && occupation.isNotEmpty
         ? '指定职业：$occupation，请使用该职业。'
         : '请根据描述选择最合适的职业。';
-    return '请根据以下描述创建一个 COC 7e 角色：\n\n$description\n\n$occHint';
+    final ruleHint = fixed != null
+        ? '\n规则：${rule.label}（属性已由系统投骰给定，见 system prompt，禁止修改）'
+        : '\n规则：${rule.label}';
+    return '请根据以下描述创建一个 COC 7e 角色：\n\n$description\n$ruleHint\n\n$occHint';
   }
 
   String _buildStep2SystemPrompt() {

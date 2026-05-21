@@ -162,7 +162,7 @@ class _HomePageState extends State<HomePage> {
                         onPressed: () {
                           manager.rollAttributes();
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('已随机生成属性 (3D6×5)')),
+                            const SnackBar(content: Text('已随机投出属性')),
                           );
                         },
                         tooltip: '随机属性',

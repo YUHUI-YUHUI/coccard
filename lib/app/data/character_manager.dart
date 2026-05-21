@@ -151,7 +151,10 @@ class CharacterManager extends ChangeNotifier {
     c.currentMp = c.maxMp;
     c.maxSanity = 99 - c.pow;
     c.sanity = c.maxSanity;
-    c.luck = ((Random().nextInt(6) + 1) + (Random().nextInt(6) + 1) + (Random().nextInt(6) + 1)) * 5;
+    // 仅在 luck 未初始化（=0）时自动投出，避免覆盖调用方已设置的值。
+    if (c.luck == 0) {
+      c.luck = ((Random().nextInt(6) + 1) + (Random().nextInt(6) + 1) + (Random().nextInt(6) + 1)) * 5;
+    }
     c.move = ((c.dex + c.siz) / 10).floor();
     c.build = ((c.str + c.siz) / 10).floor() - 2;
 
@@ -194,14 +197,18 @@ class CharacterManager extends ChangeNotifier {
   void rollAttributes() {
     final c = character;
     final r = Random();
-    c.str = ((r.nextInt(6) + 1) + (r.nextInt(6) + 1) + (r.nextInt(6) + 1)) * 5;
-    c.con = ((r.nextInt(6) + 1) + (r.nextInt(6) + 1) + (r.nextInt(6) + 1)) * 5;
-    c.siz = ((r.nextInt(6) + 1) + (r.nextInt(6) + 1) + (r.nextInt(6) + 1)) * 5;
-    c.dex = ((r.nextInt(6) + 1) + (r.nextInt(6) + 1) + (r.nextInt(6) + 1)) * 5;
-    c.app = ((r.nextInt(6) + 1) + (r.nextInt(6) + 1) + (r.nextInt(6) + 1)) * 5;
-    c.int_ = ((r.nextInt(6) + 1) + (r.nextInt(6) + 1) + (r.nextInt(6) + 1)) * 5;
-    c.pow = ((r.nextInt(6) + 1) + (r.nextInt(6) + 1) + (r.nextInt(6) + 1)) * 5;
-    c.edu = ((r.nextInt(6) + 1) + (r.nextInt(6) + 1) + (r.nextInt(6) + 1)) * 5;
+    int d6() => r.nextInt(6) + 1;
+    int d6x3x5() => (d6() + d6() + d6()) * 5;
+    int d6x2p6x5() => (d6() + d6() + 6) * 5;
+    c.str = d6x3x5();
+    c.con = d6x3x5();
+    c.siz = d6x2p6x5();
+    c.dex = d6x3x5();
+    c.app = d6x3x5();
+    c.int_ = d6x2p6x5();
+    c.pow = d6x3x5();
+    c.edu = d6x2p6x5();
+    c.luck = 0; // 让 _calculateDerivedStats 重新投运气
     _calculateDerivedStats();
     _saveCharacters();
     notifyListeners();
