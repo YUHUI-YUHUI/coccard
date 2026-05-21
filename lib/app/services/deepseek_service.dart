@@ -49,11 +49,13 @@ class Step2Result {
   String backstory;
   String appearance;
   List<CharacterItem> items;
+  int cash;
 
   Step2Result({
     this.backstory = '',
     this.appearance = '',
     List<CharacterItem>? items,
+    this.cash = 0,
   }) : items = items ?? [];
 }
 
@@ -91,6 +93,8 @@ class AiService {
         if (fixedAttributes != null) {
           result.attributes = Map.of(fixedAttributes);
         }
+        // 后处理：把 AI 没用完的技能点本地补到通用技能上
+        _autoFillRemainingSkillPoints(result);
         final valid = _validateStep1(result, effectiveRule, enforceRule: enforceRule);
         if (valid) return result;
         lastError = Exception('生成数据校验失败（属性或技能点未满足规则）');
@@ -99,6 +103,92 @@ class AiService {
       }
     }
     throw lastError ?? Exception('生成失败，已重试 $_maxRetries 次');
+  }
+
+  /// 把 AI 没分配完的职业点/兴趣点本地补到通用技能上，确保点数用完。
+  /// 单技能合计上限 90%（基础值 + occ + int）。
+  static const _fillerSkills = [
+    '聆听', '侦查', '心理学', '图书馆', '急救',
+    '说服', '话术', '魅惑', '潜行', '闪避',
+    '攀爬', '游泳', '跳跃', '投掷', '导航',
+    '自然', '历史', '科学', '神秘学',
+  ];
+  static const _skillCap = 90;
+
+  void _autoFillRemainingSkillPoints(Step1Result result) {
+    // 计算职业点上限
+    int occTotal = 0;
+    if (result.occId != null) {
+      final occ = OCCUPATIONS.where((o) => o.id == result.occId).firstOrNull;
+      if (occ != null) {
+        occTotal = calcOccupationPoints(occ.attr, {
+          '力量': result.attributes['str'] ?? 50,
+          '体质': result.attributes['con'] ?? 50,
+          '体型': result.attributes['siz'] ?? 50,
+          '敏捷': result.attributes['dex'] ?? 50,
+          '外貌': result.attributes['app'] ?? 50,
+          '智力': result.attributes['int'] ?? 50,
+          '意志': result.attributes['pow'] ?? 50,
+          '教育': result.attributes['edu'] ?? 50,
+        });
+      }
+    }
+    final intTotal = (result.attributes['int'] ?? 50) * 2;
+
+    int occSpent = result.skills.values.fold(0, (a, b) => a + b.occ);
+    int intSpent = result.skills.values.fold(0, (a, b) => a + b.interest);
+    int occRemain = (occTotal - occSpent).clamp(0, 1 << 30);
+    int intRemain = (intTotal - intSpent).clamp(0, 1 << 30);
+    if (occRemain == 0 && intRemain == 0) return;
+
+    // 单技能当前合计（基础值 + occ + int）
+    int currentTotal(String key) {
+      final base = SKILL_DEFS.where((s) => s.key == key).firstOrNull?.baseHalf ?? 0;
+      final alloc = result.skills[key];
+      return base + (alloc?.occ ?? 0) + (alloc?.interest ?? 0);
+    }
+
+    final validKeys = SKILL_DEFS.map((s) => s.key).toSet();
+    // 候选填充技能：先用 AI 已分配过的技能（保持职业风格），再补通用技能
+    final candidates = <String>{};
+    candidates.addAll(result.skills.keys
+        .where((k) => k != '母语' && validKeys.contains(k) && currentTotal(k) < _skillCap));
+    candidates.addAll(_fillerSkills
+        .where((k) => validKeys.contains(k) && currentTotal(k) < _skillCap));
+
+    SkillAlloc allocOf(String key) =>
+        result.skills[key] ?? SkillAlloc(occ: 0, interest: 0);
+
+    // 先把职业点补完（每次 +5，直到该技能到上限或职业点用完）
+    for (final key in candidates) {
+      if (occRemain == 0) break;
+      while (occRemain > 0 && currentTotal(key) < _skillCap) {
+        final a = allocOf(key);
+        result.skills[key] = SkillAlloc(occ: a.occ + 5, interest: a.interest);
+        occRemain -= 5;
+        if (occRemain < 0) {
+          // 修正越界（结余 < 5 时）
+          final overshoot = -occRemain;
+          result.skills[key] = SkillAlloc(occ: a.occ + 5 - overshoot, interest: a.interest);
+          occRemain = 0;
+        }
+      }
+    }
+
+    // 再补兴趣点
+    for (final key in candidates) {
+      if (intRemain == 0) break;
+      while (intRemain > 0 && currentTotal(key) < _skillCap) {
+        final a = allocOf(key);
+        result.skills[key] = SkillAlloc(occ: a.occ, interest: a.interest + 5);
+        intRemain -= 5;
+        if (intRemain < 0) {
+          final overshoot = -intRemain;
+          result.skills[key] = SkillAlloc(occ: a.occ, interest: a.interest + 5 - overshoot);
+          intRemain = 0;
+        }
+      }
+    }
   }
 
   Future<Step2Result> generateStep2(String description, Step1Result step1) async {
@@ -208,10 +298,37 @@ class AiService {
       );
     }).toList();
 
+    // 兜底：如果 AI 仍把"现金"/"钱"等放进 items，剥离出来累加到 cash
+    int extractedCash = 0;
+    items.removeWhere((it) {
+      final name = it.name.trim();
+      // 名称完全等于这些词的算作现金条目（避免误删"钱包"、"金币"装备等）
+      const cashWords = ['现金', '钱', 'cash', 'Cash', '钞票', '纸币'];
+      if (cashWords.contains(name)) {
+        extractedCash += it.count;
+        return true;
+      }
+      return false;
+    });
+
+    final cashRaw = data['cash'];
+    int parsedCash;
+    if (cashRaw is num) {
+      parsedCash = cashRaw.toInt();
+    } else if (cashRaw is String) {
+      // 容错：剥掉逗号、货币符号、文字
+      final digits = cashRaw.replaceAll(RegExp(r'[^\d-]'), '');
+      parsedCash = int.tryParse(digits) ?? 0;
+    } else {
+      parsedCash = 0;
+    }
+    parsedCash += extractedCash;
+
     return Step2Result(
       backstory: (data['backstory'] ?? '') as String,
       appearance: (data['appearance'] ?? '') as String,
       items: items,
+      cash: parsedCash,
     );
   }
 
@@ -356,14 +473,26 @@ skills 中的技能名必须与上方技能列表完全一致。至少分配 10 
 {
   "backstory": "200-400字的角色背景故事，要求生动具体，包含童年、教育、职业经历、重要事件等",
   "appearance": "100-200字的外貌描写，包含身高、体型、发色、面部特征、穿着风格等",
+  "cash": 整数（角色随身现金，单位元/美元/英镑等，依背景时代而定）,
   "items": [
     {"name": "物品名称", "count": 数量}
   ]
 }
 
-## 物品规则
+## 现金规则（cash 字段，整数）
+- **现金属于财务，不要写进 items 列表**
+- 参考角色的信用评级（Credit Rating）和时代背景估算合理金额：
+  - 贫民（CR 0-9）：几元到几十元
+  - 普通（CR 10-49）：几十到几百元
+  - 富裕（CR 50-89）：几百到几千元
+  - 巨富（CR 90+）：上万元甚至更多
+- 现代背景（如 2000 年后）金额可适当上调
+- 只填数值，不要带单位、千分位逗号、文字
+
+## 物品规则（items 数组）
 - 8-15 件物品
-- 必须包含：身份证明、钱包/现金、日常随身物品
+- **禁止包含"现金"、"钱"、"钱包里的现金"等条目**（钱包本身作为容器物品可以保留）
+- 必须包含：身份证明、日常随身物品
 - 根据职业添加专业工具/装备
 - 根据背景添加个人特色物品
 - count 必须 ≥ 1''';

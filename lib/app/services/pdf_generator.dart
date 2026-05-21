@@ -5,6 +5,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:flutter/services.dart';
 import '../data/character.dart';
+import '../data/skill.dart';
 
 class PdfGenerator {
   static pw.Font? _chineseFont;
@@ -304,8 +305,21 @@ class PdfGenerator {
   }
 
   // ----- 技能区 -----
+  // 把 SKILL_DEFS 中所有技能与角色已分配技能合并；未分配的用基础值（baseHalf）。
+  static Map<String, int> _completeSkills(Character character) {
+    final merged = <String, int>{};
+    for (final def in SKILL_DEFS) {
+      merged[def.key] = character.skills[def.key] ?? def.baseHalf;
+    }
+    // 角色中可能有 SKILL_DEFS 之外的自定义条目（例如"母语"、外语、专业等），也保留
+    for (final entry in character.skills.entries) {
+      merged.putIfAbsent(entry.key, () => entry.value);
+    }
+    return merged;
+  }
+
   static pw.Widget _buildSkillsSection(Character character) {
-    final sorted = _sortedSkills(character.skills);
+    final sorted = _sortedSkills(_completeSkills(character));
     final mid = (sorted.length + 1) ~/ 2;
     final leftSkills = sorted.sublist(0, mid);
     final rightSkills = sorted.length > mid ? sorted.sublist(mid) : <MapEntry<String, int>>[];

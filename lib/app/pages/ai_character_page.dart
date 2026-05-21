@@ -52,6 +52,7 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
   // step2 results (editable)
   final _backstoryCtrl = TextEditingController();
   final _appearanceCtrl = TextEditingController();
+  final _cashCtrl = TextEditingController(text: '0');
   List<_EditableItem> _items = [];
 
   @override
@@ -78,6 +79,7 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
     _birthplaceCtrl.dispose();
     _backstoryCtrl.dispose();
     _appearanceCtrl.dispose();
+    _cashCtrl.dispose();
     for (final c in _attrCtrls.values) c.dispose();
     for (final c in _skillOccCtrls.values) c.dispose();
     for (final c in _skillIntCtrls.values) c.dispose();
@@ -271,6 +273,7 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
       if (!mounted) return;
       _backstoryCtrl.text = result.backstory;
       _appearanceCtrl.text = result.appearance;
+      _cashCtrl.text = result.cash.toString();
       _items = result.items.map((i) => _EditableItem(
         nameCtrl: TextEditingController(text: i.name),
         countCtrl: TextEditingController(text: i.count.toString()),
@@ -346,6 +349,9 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
       count: int.tryParse(i.countCtrl.text) ?? 1,
     )).toList();
     manager.updateItems(items);
+
+    // 财务：写入现金
+    manager.updateFinance(cash: int.tryParse(_cashCtrl.text) ?? 0);
 
     manager.selectCharacter(c.id);
     if (mounted) {
@@ -851,6 +857,24 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
                   controller: _appearanceCtrl,
                   maxLines: 4,
                   decoration: const InputDecoration(border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 16),
+                _buildSectionTitle('财务'),
+                Row(
+                  children: [
+                    const SizedBox(width: 70, child: Text('现金')),
+                    Expanded(
+                      child: TextField(
+                        controller: _cashCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          border: OutlineInputBorder(),
+                          hintText: '随身现金（数值）',
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 _buildSectionTitle('背包物品'),
