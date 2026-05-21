@@ -423,36 +423,75 @@ class _HomePageState extends State<HomePage> {
         maxChildSize: 0.95,
         expand: false,
         builder: (context, scrollController) {
-          return Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                child: const Text('选择职业', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  controller: scrollController,
-                  itemCount: OCCUPATIONS.length,
-                  itemBuilder: (context, index) {
-                    final occ = OCCUPATIONS[index];
-                    return ListTile(
-                      title: Text(occ.n),
-                      subtitle: Text('信用: ${occ.min}-${occ.max}'),
-                      trailing: manager.character.selectedOccId == occ.id
-                          ? const Icon(Icons.check, color: Colors.blue)
-                          : null,
-                      onTap: () {
-                        manager.applyOccupation(occ);
-                        Navigator.pop(sheetContext);
-                        ScaffoldMessenger.of(scaffoldContext).showSnackBar(
-                          SnackBar(content: Text('已选择职业: ${occ.n}')),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
+          final searchCtrl = TextEditingController();
+          String query = '';
+          return StatefulBuilder(
+            builder: (context, setSheetState) {
+              final q = query.toLowerCase();
+              final list = q.isEmpty
+                  ? OCCUPATIONS
+                  : OCCUPATIONS.where((o) =>
+                      o.n.toLowerCase().contains(q) ||
+                      o.attr.toLowerCase().contains(q) ||
+                      o.sk.toLowerCase().contains(q)).toList();
+              return Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: const Text('选择职业', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TextField(
+                      controller: searchCtrl,
+                      decoration: InputDecoration(
+                        hintText: '搜索职业（名称 / 属性公式 / 技能）...',
+                        prefixIcon: const Icon(Icons.search),
+                        isDense: true,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        suffixIcon: query.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  searchCtrl.clear();
+                                  setSheetState(() => query = '');
+                                },
+                              )
+                            : null,
+                      ),
+                      onChanged: (v) => setSheetState(() => query = v.trim()),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: list.isEmpty
+                        ? Center(child: Text('未找到匹配的职业',
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)))
+                        : ListView.builder(
+                            controller: scrollController,
+                            itemCount: list.length,
+                            itemBuilder: (context, index) {
+                              final occ = list[index];
+                              return ListTile(
+                                title: Text(occ.n),
+                                subtitle: Text('${occ.attr} | 信用 ${occ.min}-${occ.max}'),
+                                trailing: manager.character.selectedOccId == occ.id
+                                    ? const Icon(Icons.check, color: Colors.blue)
+                                    : null,
+                                onTap: () {
+                                  manager.applyOccupation(occ);
+                                  Navigator.pop(sheetContext);
+                                  ScaffoldMessenger.of(scaffoldContext).showSnackBar(
+                                    SnackBar(content: Text('已选择职业: ${occ.n}')),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              );
+            },
           );
         },
       ),

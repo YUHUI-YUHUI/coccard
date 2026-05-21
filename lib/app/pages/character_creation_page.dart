@@ -45,6 +45,10 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
   String _skillSearchQuery = '';
   final _skillSearchCtrl = TextEditingController();
 
+  // 职业搜索
+  String _occSearchQuery = '';
+  final _occSearchCtrl = TextEditingController();
+
   int get _occupationPointTotal {
     if (_selectedOccupation == null) return 0;
     return calcOccupationPoints(_selectedOccupation!.attr, {
@@ -66,6 +70,7 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
     _residenceCtrl.dispose();
     _birthplaceCtrl.dispose();
     _skillSearchCtrl.dispose();
+    _occSearchCtrl.dispose();
     _destinyGroupsCtrl.dispose();
     _pointBuyTotalCtrl.dispose();
     super.dispose();
@@ -743,26 +748,59 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
               ),
             ),
           )
-        else
-          Container(
-            height: 300,
-            decoration: BoxDecoration(
-              border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-              borderRadius: BorderRadius.circular(8),
+        else ...[
+          TextField(
+            controller: _occSearchCtrl,
+            decoration: InputDecoration(
+              hintText: '搜索职业（名称 / 属性公式 / 技能）...',
+              prefixIcon: const Icon(Icons.search),
+              isDense: true,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              suffixIcon: _occSearchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _occSearchCtrl.clear();
+                        setState(() => _occSearchQuery = '');
+                      },
+                    )
+                  : null,
             ),
-            child: ListView.builder(
-              itemCount: OCCUPATIONS.length,
-              itemBuilder: (context, index) {
-                final occ = OCCUPATIONS[index];
-                return ListTile(
-                  title: Text(occ.n),
-                  subtitle: Text('${occ.attr} | 信用 ${occ.min}-${occ.max}'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () => _onOccupationSelected(occ),
-                );
-              },
-            ),
+            onChanged: (v) => setState(() => _occSearchQuery = v.trim()),
           ),
+          const SizedBox(height: 8),
+          Builder(builder: (_) {
+            final q = _occSearchQuery.toLowerCase();
+            final list = q.isEmpty
+                ? OCCUPATIONS
+                : OCCUPATIONS.where((o) =>
+                    o.n.toLowerCase().contains(q) ||
+                    o.attr.toLowerCase().contains(q) ||
+                    o.sk.toLowerCase().contains(q)).toList();
+            return Container(
+              height: 300,
+              decoration: BoxDecoration(
+                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: list.isEmpty
+                  ? Center(child: Text('未找到匹配的职业',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)))
+                  : ListView.builder(
+                      itemCount: list.length,
+                      itemBuilder: (context, index) {
+                        final occ = list[index];
+                        return ListTile(
+                          title: Text(occ.n),
+                          subtitle: Text('${occ.attr} | 信用 ${occ.min}-${occ.max}'),
+                          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                          onTap: () => _onOccupationSelected(occ),
+                        );
+                      },
+                    ),
+            );
+          }),
+        ],
       ],
     );
   }

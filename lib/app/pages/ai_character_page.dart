@@ -1047,31 +1047,73 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
         minChildSize: 0.5,
         maxChildSize: 0.95,
         expand: false,
-        builder: (ctx, scrollCtrl) => Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text('选择职业', style: Theme.of(ctx).textTheme.titleLarge),
-            ),
-            Expanded(
-              child: ListView.builder(
-                controller: scrollCtrl,
-                itemCount: OCCUPATIONS.length,
-                itemBuilder: (ctx, index) {
-                  final occ = OCCUPATIONS[index];
-                  return ListTile(
-                    title: Text(occ.n),
-                    subtitle: Text('${occ.attr} | 信用 ${occ.min}-${occ.max}'),
-                    onTap: () {
-                      setState(() => _selectedOccupation = occ);
-                      Navigator.pop(ctx);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+        builder: (ctx, scrollCtrl) {
+          final searchCtrl = TextEditingController();
+          String query = '';
+          return StatefulBuilder(
+            builder: (ctx, setSheetState) {
+              final q = query.toLowerCase();
+              final list = q.isEmpty
+                  ? OCCUPATIONS
+                  : OCCUPATIONS.where((o) =>
+                      o.n.toLowerCase().contains(q) ||
+                      o.attr.toLowerCase().contains(q) ||
+                      o.sk.toLowerCase().contains(q)).toList();
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Text('选择职业', style: Theme.of(ctx).textTheme.titleLarge),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TextField(
+                      controller: searchCtrl,
+                      autofocus: false,
+                      decoration: InputDecoration(
+                        hintText: '搜索职业（名称 / 属性公式 / 技能）...',
+                        prefixIcon: const Icon(Icons.search),
+                        isDense: true,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        suffixIcon: query.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  searchCtrl.clear();
+                                  setSheetState(() => query = '');
+                                },
+                              )
+                            : null,
+                      ),
+                      onChanged: (v) => setSheetState(() => query = v.trim()),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: list.isEmpty
+                        ? Center(child: Text('未找到匹配的职业',
+                            style: TextStyle(color: Theme.of(ctx).colorScheme.onSurfaceVariant)))
+                        : ListView.builder(
+                            controller: scrollCtrl,
+                            itemCount: list.length,
+                            itemBuilder: (ctx, index) {
+                              final occ = list[index];
+                              return ListTile(
+                                title: Text(occ.n),
+                                subtitle: Text('${occ.attr} | 信用 ${occ.min}-${occ.max}'),
+                                onTap: () {
+                                  setState(() => _selectedOccupation = occ);
+                                  Navigator.pop(ctx);
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              );
+            },
+          );
+        },
       ),
     );
   }
