@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data/character_manager.dart';
+import '../widgets/delete_character_dialog.dart';
 
 class SwitchCharacterPage extends StatelessWidget {
   const SwitchCharacterPage({super.key});
@@ -48,13 +49,35 @@ class SwitchCharacterPage extends StatelessWidget {
                     : null,
                 child: ListTile(
                   leading: CircleAvatar(
-                    child: Text(character.name.isEmpty ? '?' : character.name[0]),
+                    child: Text(
+                      character.name.isEmpty ? '?' : character.name[0],
+                    ),
                   ),
                   title: Text(character.name.isEmpty ? '新角色' : character.name),
-                  subtitle: Text(character.occupation.isEmpty ? '未选择职业' : character.occupation),
-                  trailing: isSelected
-                      ? const Icon(Icons.check, color: Colors.green)
-                      : null,
+                  subtitle: Text(
+                    character.occupation.isEmpty
+                        ? '未选择职业'
+                        : character.occupation,
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isSelected)
+                        const Icon(Icons.check, color: Colors.green),
+                      IconButton(
+                        icon: Icon(
+                          Icons.delete_outline,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        tooltip: '删除角色卡',
+                        onPressed: () => showDeleteCharacterDialog(
+                          context: context,
+                          manager: manager,
+                          index: index,
+                        ),
+                      ),
+                    ],
+                  ),
                   onTap: () {
                     manager.selectCharacter(character.id);
                     Navigator.pop(context);

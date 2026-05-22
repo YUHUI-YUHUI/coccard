@@ -69,14 +69,26 @@ class CharacterManager extends ChangeNotifier {
   }
 
   Future<void> deleteCharacter(int index) async {
-    if (_characters.length > 1 && index >= 0 && index < _characters.length) {
-      _characters.removeAt(index);
-      if (_currentIndex >= _characters.length) {
-        _currentIndex = _characters.length - 1;
-      }
-      await _saveCharacters();
-      notifyListeners();
+    if (index < 0 || index >= _characters.length) {
+      return;
     }
+
+    final isDeletingCurrent = index == _currentIndex;
+    _characters.removeAt(index);
+
+    if (_characters.isEmpty) {
+      _currentIndex = 0;
+    } else if (isDeletingCurrent) {
+      _currentIndex =
+          index >= _characters.length ? _characters.length - 1 : index;
+    } else if (index < _currentIndex) {
+      _currentIndex--;
+    } else if (_currentIndex >= _characters.length) {
+      _currentIndex = _characters.length - 1;
+    }
+
+    await _saveCharacters();
+    notifyListeners();
   }
 
   void updateBasicInfo({

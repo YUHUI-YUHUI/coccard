@@ -6,6 +6,7 @@ import '../widgets/attribute_widget.dart';
 import '../widgets/derived_stats_widget.dart';
 import '../widgets/dice_roller.dart';
 import '../widgets/app_drawer_widget.dart';
+import '../widgets/delete_character_dialog.dart';
 import '../data/coc_data.dart';
 import '../services/pdf_generator.dart';
 
@@ -51,10 +52,45 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             icon: const Icon(Icons.picture_as_pdf),
             onPressed: () {
-              final manager = Provider.of<CharacterManager>(context, listen: false);
+              final manager = Provider.of<CharacterManager>(
+                context,
+                listen: false,
+              );
               PdfGenerator.generateAndPrint(manager.character);
             },
             tooltip: '导出PDF',
+          ),
+          Consumer<CharacterManager>(
+            builder: (context, manager, _) {
+              if (!manager.hasCharacters) {
+                return const SizedBox.shrink();
+              }
+
+              return IconButton(
+                icon: const Icon(Icons.delete_outline),
+                onPressed: () {
+                  final currentCharacterId = manager.character.id;
+                  final currentIndex = manager.characters.indexWhere(
+                    (character) => character.id == currentCharacterId,
+                  );
+                  showDeleteCharacterDialog(
+                    context: context,
+                    manager: manager,
+                    index: currentIndex,
+                    onDeleted: () {
+                      if (!manager.hasCharacters) {
+                        Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          '/',
+                          (route) => false,
+                        );
+                      }
+                    },
+                  );
+                },
+                tooltip: '删除角色卡',
+              );
+            },
           ),
         ],
       ),

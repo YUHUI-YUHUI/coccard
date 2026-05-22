@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data/character_manager.dart';
+import '../widgets/delete_character_dialog.dart';
 
 class StartPage extends StatelessWidget {
   const StartPage({super.key});
@@ -108,6 +109,18 @@ class StartPage extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(width: 8),
+                IconButton(
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  tooltip: '删除角色卡',
+                  onPressed: () => showDeleteCharacterDialog(
+                    context: context,
+                    manager: manager,
+                    index: index,
+                  ),
+                ),
                 const Icon(Icons.arrow_forward_ios, size: 16),
               ],
             ),
