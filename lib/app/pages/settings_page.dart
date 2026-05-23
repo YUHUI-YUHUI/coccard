@@ -1,5 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../data/character_manager.dart';
 import '../setting/app_pref.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -10,6 +16,8 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  static const MethodChannel _backupChannel = MethodChannel('coccard/backup');
+
   final TextEditingController _apiKeyCtrl = TextEditingController();
   bool _obscureKey = true;
 
@@ -34,6 +42,202 @@ class _SettingsPageState extends State<SettingsPage> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('API Key 已保存')),
+      );
+    }
+  }
+
+  Future<void> _exportCharacters() async {
+    final manager = context.read<CharacterManager>();
+    if (!manager.hasCharacters) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('当前没有可导出的角色卡')),
+      );
+      return;
+    }
+
+    final backupJson = manager.exportCharactersBackupJson();
+    await Clipboard.setData(ClipboardData(text: backupJson));
+
+    String? filePath;
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final timestamp = DateTime.now()
+          .toIso8601String()
+          .replaceAll(':', '-')
+          .replaceAll('.', '-');
+      final file = File('${directory.path}/coccard_backup_$timestamp.json');
+      await file.writeAsString(backupJson);
+      filePath = file.path;
+    } catch (_) {
+      filePath = null;
+    }
+
+    var shared = false;
+    try {
+      await _backupChannel.invokeMethod<void>('shareText', {
+        'title': 'COC 角色卡备份',
+        'text': backupJson,
+      });
+      shared = true;
+    } catch (_) {
+      shared = false;
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(shared
+            ? '备份 JSON 已复制，并已打开分享'
+            : '备份 JSON 已复制到剪贴板'),
+      ),
+    );
+
+    if (filePath != null && mounted) {
+      showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('备份已保存'),
+          content: SelectableText('文件位置：\n$filePath'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('知道了'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  void _showImportDialog() {
+    final jsonCtrl = TextEditingController();
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('导入角色'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: TextField(
+            controller: jsonCtrl,
+            maxLines: 10,
+            decoration: const InputDecoration(
+              hintText: '粘贴导出的 JSON 备份内容',
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              try {
+                final text =
+                    await _backupChannel.invokeMethod<String>('pickJsonText');
+                if (text != null && text.isNotEmpty) {
+                  jsonCtrl.text = text;
+                }
+              } catch (_) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('当前平台不支持选择文件，请粘贴 JSON')),
+                );
+              }
+            },
+            child: const Text('选择文件'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final data = await Clipboard.getData(Clipboard.kTextPlain);
+              jsonCtrl.text = data?.text ?? '';
+            },
+            child: const Text('粘贴'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => _importCharacters(
+              dialogContext,
+              jsonCtrl.text,
+              replaceExisting: false,
+            ),
+            child: const Text('追加'),
+          ),
+          ElevatedButton(
+            onPressed: () => _confirmReplaceImport(dialogContext, jsonCtrl.text),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            child: const Text('覆盖'),
+          ),
+        ],
+      ),
+    ).then((_) => jsonCtrl.dispose());
+  }
+
+  void _confirmReplaceImport(BuildContext importDialogContext, String rawJson) {
+    showDialog<void>(
+      context: context,
+      builder: (confirmContext) => AlertDialog(
+        title: const Text('覆盖现有角色？'),
+        content: const Text('覆盖导入会先清空当前角色卡，此操作不可撤销。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(confirmContext),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(confirmContext);
+              await _importCharacters(
+                importDialogContext,
+                rawJson,
+                replaceExisting: true,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            child: const Text('确认覆盖'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _importCharacters(
+    BuildContext dialogContext,
+    String rawJson, {
+    required bool replaceExisting,
+  }) async {
+    final trimmed = rawJson.trim();
+    if (trimmed.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先粘贴 JSON 备份内容')),
+      );
+      return;
+    }
+
+    try {
+      final count =
+          await context.read<CharacterManager>().importCharactersBackupJson(
+                trimmed,
+                replaceExisting: replaceExisting,
+              );
+      if (!dialogContext.mounted) return;
+      Navigator.pop(dialogContext);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已导入 $count 张角色卡')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('导入失败：$e')),
       );
     }
   }
@@ -67,22 +271,14 @@ class _SettingsPageState extends State<SettingsPage> {
           ListTile(
             leading: const Icon(Icons.backup),
             title: const Text('导出角色'),
-            subtitle: const Text('将角色数据导出为 JSON 文件'),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('导出功能开发中')),
-              );
-            },
+            subtitle: const Text('复制 JSON，并打开系统分享'),
+            onTap: _exportCharacters,
           ),
           ListTile(
             leading: const Icon(Icons.restore),
             title: const Text('导入角色'),
-            subtitle: const Text('从 JSON 文件导入角色数据'),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('导入功能开发中')),
-              );
-            },
+            subtitle: const Text('粘贴 JSON，可追加或覆盖当前角色'),
+            onTap: _showImportDialog,
           ),
           const Divider(),
           ListTile(

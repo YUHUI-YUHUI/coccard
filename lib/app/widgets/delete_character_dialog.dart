@@ -28,13 +28,22 @@ void showDeleteCharacterDialog({
         ),
         ElevatedButton(
           onPressed: () async {
-            await manager.deleteCharacter(index);
+            final deleted = await manager.deleteCharacter(index);
+            if (deleted == null) return;
             if (!dialogContext.mounted) return;
             Navigator.pop(dialogContext);
 
             if (!context.mounted) return;
             messenger.showSnackBar(
-              SnackBar(content: Text('已删除「$characterName」')),
+              SnackBar(
+                content: Text('已删除「$characterName」'),
+                action: SnackBarAction(
+                  label: '撤销',
+                  onPressed: () {
+                    manager.restoreDeletedCharacter(deleted);
+                  },
+                ),
+              ),
             );
             onDeleted?.call();
           },

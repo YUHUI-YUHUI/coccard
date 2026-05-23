@@ -1,10 +1,24 @@
 import 'dart:convert';
 import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'character.dart';
 import 'skill.dart';
 import 'coc_data.dart';
+
+class DeletedCharacter {
+  final Character character;
+  final int index;
+  final int? currentCharacterId;
+
+  const DeletedCharacter({
+    required this.character,
+    required this.index,
+    required this.currentCharacterId,
+  });
+}
 
 class CharacterManager extends ChangeNotifier {
   static const String _charactersKey = 'coc_characters';
@@ -23,7 +37,8 @@ class CharacterManager extends ChangeNotifier {
     return _characters.map((c) => c.id).reduce((a, b) => a > b ? a : b) + 1;
   }
 
-  Character get character => _characters.isNotEmpty ? _characters[_currentIndex] : Character();
+  Character get character =>
+      _characters.isNotEmpty ? _characters[_currentIndex] : Character();
   List<Character> get characters => _characters;
   bool get hasCharacters => _characters.isNotEmpty;
 
@@ -45,7 +60,8 @@ class CharacterManager extends ChangeNotifier {
   }
 
   Future<void> _saveCharacters() async {
-    final String charsJson = json.encode(_characters.map((e) => e.toJson()).toList());
+    final String charsJson =
+        json.encode(_characters.map((e) => e.toJson()).toList());
     await _prefs.setString(_charactersKey, charsJson);
     await _prefs.setInt(_currentIndexKey, _currentIndex);
   }
@@ -68,13 +84,29 @@ class CharacterManager extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteCharacter(int index) async {
+  int _nextIdFrom(Set<int> usedIds) {
+    var id = 1;
+    while (usedIds.contains(id)) {
+      id++;
+    }
+    return id;
+  }
+
+  int _clampIndex(int index, int maxIndex) {
+    if (index < 0) return 0;
+    if (index > maxIndex) return maxIndex;
+    return index;
+  }
+
+  Future<DeletedCharacter?> deleteCharacter(int index) async {
     if (index < 0 || index >= _characters.length) {
-      return;
+      return null;
     }
 
     final isDeletingCurrent = index == _currentIndex;
-    _characters.removeAt(index);
+    final currentCharacterId =
+        _characters.isEmpty ? null : _characters[_currentIndex].id;
+    final deletedCharacter = _characters.removeAt(index);
 
     if (_characters.isEmpty) {
       _currentIndex = 0;
@@ -89,6 +121,102 @@ class CharacterManager extends ChangeNotifier {
 
     await _saveCharacters();
     notifyListeners();
+    return DeletedCharacter(
+      character: deletedCharacter,
+      index: index,
+      currentCharacterId: currentCharacterId,
+    );
+  }
+
+  Future<void> restoreDeletedCharacter(DeletedCharacter deleted) async {
+    final usedIds = _characters.map((c) => c.id).toSet();
+    if (deleted.character.id == 0 || usedIds.contains(deleted.character.id)) {
+      deleted.character.id = _nextIdFrom(usedIds);
+    }
+
+    final insertIndex = _clampIndex(deleted.index, _characters.length);
+    _characters.insert(insertIndex, deleted.character);
+
+    final restoredCurrentIndex = _characters.indexWhere(
+      (c) => c.id == deleted.currentCharacterId,
+    );
+    _currentIndex =
+        restoredCurrentIndex >= 0 ? restoredCurrentIndex : insertIndex;
+
+    await _saveCharacters();
+    notifyListeners();
+  }
+
+  String exportCharactersBackupJson() {
+    final backup = {
+      'version': 1,
+      'app': 'coccard',
+      'exportedAt': DateTime.now().toIso8601String(),
+      'currentIndex': _currentIndex,
+      'characters': _characters.map((e) => e.toJson()).toList(),
+    };
+    return const JsonEncoder.withIndent('  ').convert(backup);
+  }
+
+  Future<int> importCharactersBackupJson(
+    String rawJson, {
+    required bool replaceExisting,
+  }) async {
+    final decoded = json.decode(rawJson);
+    late final List<dynamic> characterJsonList;
+    var importedCurrentIndex = 0;
+
+    if (decoded is List) {
+      characterJsonList = decoded;
+    } else if (decoded is Map) {
+      final backup = Map<String, dynamic>.from(decoded);
+      final charactersValue = backup['characters'];
+      if (charactersValue is! List) {
+        throw const FormatException('备份中没有找到角色列表');
+      }
+      characterJsonList = charactersValue;
+      final currentIndexValue = backup['currentIndex'];
+      if (currentIndexValue is int) {
+        importedCurrentIndex = currentIndexValue;
+      }
+    } else {
+      throw const FormatException('备份格式不正确');
+    }
+
+    final importedCharacters = characterJsonList.map((item) {
+      if (item is! Map) {
+        throw const FormatException('角色数据格式不正确');
+      }
+      return Character.fromJson(Map<String, dynamic>.from(item));
+    }).toList();
+
+    if (importedCharacters.isEmpty) {
+      return 0;
+    }
+
+    if (replaceExisting) {
+      _characters = [];
+      _currentIndex = 0;
+    }
+
+    final usedIds = _characters.map((c) => c.id).toSet();
+    for (final character in importedCharacters) {
+      if (character.id == 0 || usedIds.contains(character.id)) {
+        character.id = _nextIdFrom(usedIds);
+      }
+      usedIds.add(character.id);
+      _characters.add(character);
+    }
+
+    if (replaceExisting) {
+      _currentIndex = _clampIndex(importedCurrentIndex, _characters.length - 1);
+    } else if (_characters.length == importedCharacters.length) {
+      _currentIndex = 0;
+    }
+
+    await _saveCharacters();
+    notifyListeners();
+    return importedCharacters.length;
   }
 
   void updateBasicInfo({

@@ -1,9 +1,14 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:math';
+
 import '../data/character_manager.dart';
 import '../data/character.dart';
+import '../data/coc_data.dart';
 import '../data/skill.dart';
+
+enum _SkillListFilter { occupation, added, recommended, all }
 
 class SkillPage extends StatefulWidget {
   const SkillPage({super.key});
@@ -12,7 +17,8 @@ class SkillPage extends StatefulWidget {
   State<SkillPage> createState() => _SkillPageState();
 }
 
-class _SkillPageState extends State<SkillPage> with SingleTickerProviderStateMixin {
+class _SkillPageState extends State<SkillPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
@@ -20,7 +26,7 @@ class _SkillPageState extends State<SkillPage> with SingleTickerProviderStateMix
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -39,7 +45,8 @@ class _SkillPageState extends State<SkillPage> with SingleTickerProviderStateMix
           controller: _tabController,
           tabs: const [
             Tab(text: '本职'),
-            Tab(text: '其他'),
+            Tab(text: '已加点'),
+            Tab(text: '推荐未加'),
             Tab(text: '全部'),
           ],
         ),
@@ -56,7 +63,9 @@ class _SkillPageState extends State<SkillPage> with SingleTickerProviderStateMix
                   decoration: InputDecoration(
                     hintText: '搜索技能...',
                     prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear),
@@ -74,9 +83,10 @@ class _SkillPageState extends State<SkillPage> with SingleTickerProviderStateMix
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    _buildSkillList(manager, SkillCategory.academic),
-                    _buildSkillList(manager, SkillCategory.other),
-                    _buildSkillList(manager, null),
+                    _buildSkillList(manager, _SkillListFilter.occupation),
+                    _buildSkillList(manager, _SkillListFilter.added),
+                    _buildSkillList(manager, _SkillListFilter.recommended),
+                    _buildSkillList(manager, _SkillListFilter.all),
                   ],
                 ),
               ),
@@ -88,7 +98,8 @@ class _SkillPageState extends State<SkillPage> with SingleTickerProviderStateMix
   }
 
   Widget _buildPointDisplay(Character character) {
-    final occRemaining = character.occupationPoint - character.occupationPointSpent;
+    final occRemaining =
+        character.occupationPoint - character.occupationPointSpent;
     final intRemaining = character.interestPoint - character.interestPointSpent;
 
     return Container(
@@ -99,18 +110,31 @@ class _SkillPageState extends State<SkillPage> with SingleTickerProviderStateMix
           Expanded(
             child: Column(
               children: [
-                Text('职业点数', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary)),
+                Text(
+                  '职业点数',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
                 Text(
                   '$occRemaining / ${character.occupationPoint}',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 LinearProgressIndicator(
                   value: character.occupationPoint > 0
                       ? (character.occupationPointSpent / character.occupationPoint)
                       : 0,
-                  backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
+                  backgroundColor:
+                      Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).colorScheme.primary,
+                  ),
                 ),
               ],
             ),
@@ -119,18 +143,31 @@ class _SkillPageState extends State<SkillPage> with SingleTickerProviderStateMix
           Expanded(
             child: Column(
               children: [
-                Text('兴趣点数', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.tertiary)),
+                Text(
+                  '兴趣点数',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.tertiary,
+                  ),
+                ),
                 Text(
                   '$intRemaining / ${character.interestPoint}',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.tertiary),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.tertiary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 LinearProgressIndicator(
                   value: character.interestPoint > 0
                       ? (character.interestPointSpent / character.interestPoint)
                       : 0,
-                  backgroundColor: Theme.of(context).colorScheme.tertiary.withOpacity(0.2),
-                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.tertiary),
+                  backgroundColor:
+                      Theme.of(context).colorScheme.tertiary.withOpacity(0.2),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).colorScheme.tertiary,
+                  ),
                 ),
               ],
             ),
@@ -140,18 +177,41 @@ class _SkillPageState extends State<SkillPage> with SingleTickerProviderStateMix
     );
   }
 
-  Widget _buildSkillList(CharacterManager manager, SkillCategory? filter) {
+  Widget _buildSkillList(CharacterManager manager, _SkillListFilter filter) {
     final character = manager.character;
 
     List<SkillDef> filteredSkills = SKILL_DEFS.where((skill) {
-      if (_searchQuery.isNotEmpty) {
-        return skill.name.contains(_searchQuery);
+      if (!_matchesSearch(skill)) {
+        return false;
       }
-      if (filter != null) {
-        return skill.category == filter;
+
+      switch (filter) {
+        case _SkillListFilter.occupation:
+          return _isOccupationSkill(character, skill);
+        case _SkillListFilter.added:
+          return _isSkillAdded(character, skill);
+        case _SkillListFilter.recommended:
+          return _isOccupationSkill(character, skill) &&
+              !_isSkillAdded(character, skill);
+        case _SkillListFilter.all:
+          return true;
       }
-      return true;
     }).toList();
+
+    if (filteredSkills.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            _emptySkillText(character, filter),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      );
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -173,20 +233,130 @@ class _SkillPageState extends State<SkillPage> with SingleTickerProviderStateMix
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: skillValue >= skill.baseHalf ? Theme.of(context).colorScheme.tertiary : Theme.of(context).colorScheme.onSurfaceVariant,
+                    color: skillValue > skill.baseHalf
+                        ? Theme.of(context).colorScheme.tertiary
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.casino),
-                  onPressed: () => _rollSkillCheck(context, skill.name, skillValue),
+                  onPressed: () =>
+                      _rollSkillCheck(context, skill.name, skillValue),
                 ),
               ],
             ),
-            onTap: () => _showSkillEditDialog(context, skill, skillValue, manager),
+            onTap: () =>
+                _showSkillEditDialog(context, skill, skillValue, manager),
           ),
         );
       },
     );
+  }
+
+  bool _matchesSearch(SkillDef skill) {
+    final query = _searchQuery.trim().toLowerCase();
+    if (query.isEmpty) {
+      return true;
+    }
+
+    return skill.name.toLowerCase().contains(query) ||
+        skill.key.toLowerCase().contains(query) ||
+        _getCategoryName(skill.category).contains(query);
+  }
+
+  bool _isSkillAdded(Character character, SkillDef skill) {
+    final currentValue = character.skills[skill.name] ?? skill.baseHalf;
+    return currentValue > skill.baseHalf;
+  }
+
+  bool _isOccupationSkill(Character character, SkillDef skill) {
+    final occupation = _selectedOccupation(character);
+    if (occupation == null) {
+      return false;
+    }
+
+    final skillText = occupation.sk;
+    if (skillText.contains(skill.name) || skillText.contains(skill.key)) {
+      return true;
+    }
+
+    final parenIndex = skill.name.indexOf('（');
+    final skillRoot = parenIndex > 0
+        ? skill.name.substring(0, parenIndex)
+        : skill.name;
+    if (skillRoot.length >= 2 && skillText.contains(skillRoot)) {
+      return true;
+    }
+
+    if (skillText.contains('社交技能') &&
+        skill.category == SkillCategory.social) {
+      return true;
+    }
+    if (skillText.contains('格斗') &&
+        skill.category == SkillCategory.combat) {
+      return true;
+    }
+    if (skillText.contains('射击') &&
+        skill.category == SkillCategory.shooting) {
+      return true;
+    }
+    if ((skillText.contains('技艺') || skillText.contains('艺术')) &&
+        (skill.name.startsWith('技艺') || skill.name == '艺术/手艺')) {
+      return true;
+    }
+    if (skillText.contains('科学') && skill.name == '科学') {
+      return true;
+    }
+    if (skillText.contains('驾驶') && skill.name.startsWith('驾驶')) {
+      return true;
+    }
+    if (skillText.contains('汽车驾驶') && skill.name == '驾驶（汽车）') {
+      return true;
+    }
+    if (skillText.contains('语言') &&
+        (skill.name == '母语' || skill.name == '外语')) {
+      return true;
+    }
+    if (skillText.contains('考古') && skill.name == '考古学') {
+      return true;
+    }
+
+    return false;
+  }
+
+  Occupation? _selectedOccupation(Character character) {
+    final selectedOccId = character.selectedOccId;
+    if (selectedOccId == null) {
+      return null;
+    }
+
+    for (final occupation in OCCUPATIONS) {
+      if (occupation.id == selectedOccId) {
+        return occupation;
+      }
+    }
+    return null;
+  }
+
+  String _emptySkillText(Character character, _SkillListFilter filter) {
+    if (_searchQuery.trim().isNotEmpty) {
+      return '没有找到匹配的技能';
+    }
+
+    switch (filter) {
+      case _SkillListFilter.occupation:
+        return character.selectedOccId == null
+            ? '先在角色页选择职业，之后这里会显示本职技能'
+            : '当前职业没有匹配到本职技能';
+      case _SkillListFilter.added:
+        return '还没有加点的技能';
+      case _SkillListFilter.recommended:
+        return character.selectedOccId == null
+            ? '先在角色页选择职业，之后这里会显示推荐但未加点的技能'
+            : '本职技能都已经加过点了';
+      case _SkillListFilter.all:
+        return '没有技能';
+    }
   }
 
   String _getCategoryName(SkillCategory category) {
