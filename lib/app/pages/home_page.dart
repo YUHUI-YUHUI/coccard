@@ -111,7 +111,7 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 16),
                 _buildWeaponsCard(context, character),
                 const SizedBox(height: 16),
-                _buildItemsCard(context, character),
+                _buildItemsCard(context, character, manager),
                 const SizedBox(height: 16),
                 _buildFinanceCard(context, character, manager),
                 const SizedBox(height: 16),
@@ -328,22 +328,65 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildItemsCard(BuildContext context, Character character) {
-    if (character.items.isEmpty) return const SizedBox.shrink();
+  Widget _buildItemsCard(
+    BuildContext context,
+    Character character,
+    CharacterManager manager,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('背包物品', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '背包物品',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  tooltip: '添加物品',
+                  onPressed: () => _showItemDialog(context, manager),
+                ),
+              ],
+            ),
             const Divider(),
-            ...character.items.map((item) => ListTile(
-              dense: true,
-              leading: const Icon(Icons.inventory_2_outlined, size: 20),
-              title: Text(item.name),
-              trailing: Text('x${item.count}', style: const TextStyle(fontWeight: FontWeight.bold)),
-            )),
+            if (character.items.isEmpty) ...[
+              Text(
+                '暂无背包物品',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () => _showItemDialog(context, manager),
+                icon: const Icon(Icons.add),
+                label: const Text('添加物品'),
+              ),
+            ] else
+              ...character.items.asMap().entries.map((entry) {
+                final index = entry.key;
+                final item = entry.value;
+                final itemName = item.name.trim().isEmpty ? '未命名物品' : item.name;
+                return ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.inventory_2_outlined, size: 20),
+                  title: Text(itemName),
+                  subtitle: Text('数量 ${item.count}'),
+                  trailing: const Icon(Icons.edit_outlined, size: 20),
+                  onTap: () => _showItemDialog(
+                    context,
+                    manager,
+                    index: index,
+                    item: item,
+                  ),
+                );
+              }),
           ],
         ),
       ),
@@ -532,6 +575,84 @@ class _HomePageState extends State<HomePage> {
         },
       ),
     );
+  }
+
+  void _showItemDialog(
+    BuildContext context,
+    CharacterManager manager, {
+    int? index,
+    CharacterItem? item,
+  }) {
+    final nameCtrl = TextEditingController(text: item?.name ?? '');
+    final countCtrl = TextEditingController(text: (item?.count ?? 1).toString());
+    final isEditing = index != null;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(isEditing ? '编辑物品' : '添加物品'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              autofocus: !isEditing,
+              decoration: const InputDecoration(labelText: '物品名称'),
+            ),
+            TextField(
+              controller: countCtrl,
+              decoration: const InputDecoration(labelText: '数量'),
+              keyboardType: TextInputType.number,
+            ),
+          ],
+        ),
+        actions: [
+          if (isEditing)
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
+              onPressed: () {
+                manager.deleteItem(index!);
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('删除'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = nameCtrl.text.trim();
+              if (name.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('请输入物品名称')),
+                );
+                return;
+              }
+
+              final newItem = CharacterItem(
+                name: name,
+                count: _parseItemCount(countCtrl.text),
+              );
+              if (isEditing) {
+                manager.updateItem(index!, newItem);
+              } else {
+                manager.addItem(newItem);
+              }
+              Navigator.pop(dialogContext);
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _parseItemCount(String value) {
+    final count = int.tryParse(value.trim()) ?? 1;
+    return count < 1 ? 1 : count;
   }
 
   void _showFinanceDialog(BuildContext context, Character character, CharacterManager manager) {
