@@ -248,6 +248,8 @@ class _ReferencePageState extends State<ReferencePage> with SingleTickerProvider
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Column(
             children: [
+              _buildRulebookCard(),
+              const SizedBox(height: 12),
               TextField(
                 controller: _ruleSearchCtrl,
                 decoration: InputDecoration(
@@ -307,6 +309,19 @@ class _ReferencePageState extends State<ReferencePage> with SingleTickerProvider
                 ),
         ),
       ],
+    );
+  }
+
+  Widget _buildRulebookCard() {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: ListTile(
+        leading: const Icon(Icons.picture_as_pdf_outlined),
+        title: const Text('守秘人规则书 PDF'),
+        subtitle: const Text('应用内阅读'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.pushNamed(context, '/rulebook'),
+      ),
     );
   }
 
