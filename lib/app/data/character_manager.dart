@@ -555,6 +555,17 @@ class CharacterManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool spendLuck(int amount) {
+    if (amount <= 0) return false;
+    final c = character;
+    if (c.luck < amount) return false;
+
+    c.luck -= amount;
+    _saveCharacters();
+    notifyListeners();
+    return true;
+  }
+
   void loseSanity(int amount) {
     character.sanity = (character.sanity - amount).clamp(0, character.maxSanity);
     _saveCharacters();

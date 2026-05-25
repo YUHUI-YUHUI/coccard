@@ -10,6 +10,52 @@ import '../data/skill.dart';
 
 enum _SkillListFilter { occupation, added, recommended, all }
 
+enum _SkillCheckLevel { critical, extreme, hard, regular, failure, fumble }
+
+class _SkillCheckResult {
+  final int roll;
+  final int skillValue;
+  final int hardValue;
+  final int extremeValue;
+  final _SkillCheckLevel level;
+
+  const _SkillCheckResult({
+    required this.roll,
+    required this.skillValue,
+    required this.hardValue,
+    required this.extremeValue,
+    required this.level,
+  });
+
+  bool get isSuccess {
+    return level == _SkillCheckLevel.critical ||
+        level == _SkillCheckLevel.extreme ||
+        level == _SkillCheckLevel.hard ||
+        level == _SkillCheckLevel.regular;
+  }
+
+  bool get canUseLuck => level == _SkillCheckLevel.failure;
+
+  int get luckCost => roll - skillValue;
+
+  String get resultText {
+    switch (level) {
+      case _SkillCheckLevel.critical:
+        return '大成功';
+      case _SkillCheckLevel.extreme:
+        return '极难成功';
+      case _SkillCheckLevel.hard:
+        return '困难成功';
+      case _SkillCheckLevel.regular:
+        return '普通成功';
+      case _SkillCheckLevel.failure:
+        return '失败';
+      case _SkillCheckLevel.fumble:
+        return '大失败';
+    }
+  }
+}
+
 class SkillPage extends StatefulWidget {
   const SkillPage({super.key});
 
@@ -240,8 +286,9 @@ class _SkillPageState extends State<SkillPage>
                 ),
                 IconButton(
                   icon: const Icon(Icons.casino),
+                  tooltip: '一键检定',
                   onPressed: () =>
-                      _rollSkillCheck(context, skill.name, skillValue),
+                      _rollSkillCheck(context, manager, skill.name, skillValue),
                 ),
               ],
             ),
@@ -481,52 +528,151 @@ class _SkillPageState extends State<SkillPage>
     );
   }
 
-  void _rollSkillCheck(BuildContext context, String skillName, int skillValue) {
+  void _rollSkillCheck(
+    BuildContext context,
+    CharacterManager manager,
+    String skillName,
+    int skillValue,
+  ) {
     final random = Random();
     final roll = random.nextInt(100) + 1;
-    final success = roll <= skillValue;
-    final critical = roll <= skillValue / 20;
-    final fumble = roll >= 96;
-
-    String resultText;
-    if (critical) {
-      resultText = '大成功！';
-    } else if (fumble) {
-      resultText = '大失败！';
-    } else if (success) {
-      resultText = '成功';
-    } else {
-      resultText = '失败';
-    }
+    final result = _evaluateSkillCheck(skillValue, roll);
+    final luckCost = result.luckCost;
+    final currentLuck = manager.character.luck;
+    final canSpendLuck =
+        result.canUseLuck && luckCost > 0 && luckCost <= currentLuck;
+    final resultColor = result.isSuccess
+        ? Theme.of(context).colorScheme.tertiary
+        : Theme.of(context).colorScheme.error;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('技能检定: $skillName'),
+      builder: (dialogContext) => AlertDialog(
+        title: Text('$skillName 检定'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('$roll', style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text('技能值: $skillValue%', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-            const SizedBox(height: 16),
             Text(
-              resultText,
+              '${result.roll}',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 56,
+                fontWeight: FontWeight.bold,
+                color: resultColor,
+              ),
+            ),
+            Text(
+              result.resultText,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: success ? Theme.of(context).colorScheme.tertiary : Theme.of(context).colorScheme.error,
+                color: resultColor,
               ),
             ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: [
+                _checkInfoChip('目标', '${result.skillValue}%'),
+                _checkInfoChip('困难', '${result.hardValue}%'),
+                _checkInfoChip('极难', '${result.extremeValue}%'),
+                _checkInfoChip('当前幸运', '$currentLuck'),
+              ],
+            ),
+            if (!result.isSuccess) ...[
+              const SizedBox(height: 16),
+              Text(
+                _luckHintText(result, currentLuck),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ],
         ),
         actions: [
+          if (canSpendLuck)
+            TextButton.icon(
+              onPressed: () {
+                final spent = manager.spendLuck(luckCost);
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      spent
+                          ? '已花费 $luckCost 幸运，补成普通成功'
+                          : '幸运不足，无法补正',
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.star),
+              label: Text('花费 $luckCost 幸运'),
+            ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('确定'),
           ),
         ],
       ),
     );
+  }
+
+  _SkillCheckResult _evaluateSkillCheck(int skillValue, int roll) {
+    final target = max(0, skillValue);
+    final hardValue = target ~/ 2;
+    final extremeValue = target ~/ 5;
+    final isFumble = target < 50 ? roll >= 96 : roll == 100;
+
+    late final _SkillCheckLevel level;
+    if (isFumble) {
+      level = _SkillCheckLevel.fumble;
+    } else if (roll == 1) {
+      level = _SkillCheckLevel.critical;
+    } else if (roll <= extremeValue) {
+      level = _SkillCheckLevel.extreme;
+    } else if (roll <= hardValue) {
+      level = _SkillCheckLevel.hard;
+    } else if (roll <= target) {
+      level = _SkillCheckLevel.regular;
+    } else {
+      level = _SkillCheckLevel.failure;
+    }
+
+    return _SkillCheckResult(
+      roll: roll,
+      skillValue: target,
+      hardValue: hardValue,
+      extremeValue: extremeValue,
+      level: level,
+    );
+  }
+
+  Widget _checkInfoChip(String label, String value) {
+    return Chip(
+      visualDensity: VisualDensity.compact,
+      label: Text('$label $value'),
+    );
+  }
+
+  String _luckHintText(_SkillCheckResult result, int currentLuck) {
+    if (result.level == _SkillCheckLevel.fumble) {
+      return '大失败不能通过花费幸运补正';
+    }
+
+    final cost = result.luckCost;
+    if (cost <= 0) {
+      return '';
+    }
+
+    if (cost <= currentLuck) {
+      return '可花费 $cost 点幸运，将结果补成普通成功';
+    }
+    return '需要 $cost 点幸运才能补成普通成功，当前幸运不足';
   }
 }
