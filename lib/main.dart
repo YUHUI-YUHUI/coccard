@@ -13,17 +13,20 @@ import 'app/pages/weapon_page.dart';
 import 'app/pages/reference_page.dart';
 import 'app/pages/ai_character_page.dart';
 import 'app/pages/rulebook_reader_page.dart';
+import 'app/setting/theme_controller.dart';
 import 'app/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   final characterManager = CharacterManager(prefs: prefs);
+  final themeController = ThemeController(prefs: prefs);
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: characterManager),
+        ChangeNotifierProvider.value(value: themeController),
       ],
       child: const COCCharacterApp(),
     ),
@@ -35,23 +38,28 @@ class COCCharacterApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'COC 角色卡',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      routes: {
-        '/': (context) => const StartPage(),
-        '/home': (context) => const HomePage(),
-        '/switch_character': (context) => const SwitchCharacterPage(),
-        '/create_character': (context) => const CharacterCreationPage(),
-        '/settings': (context) => const SettingsPage(),
-        '/about': (context) => const AboutPage(),
-        '/skills': (context) => const SkillPage(),
-        '/weapons': (context) => const WeaponPage(),
-        '/reference': (context) => const ReferencePage(),
-        '/ai_character': (context) => const AiCharacterPage(),
-        '/rulebook': (context) => const RulebookReaderPage(),
+    return Consumer<ThemeController>(
+      builder: (context, themeController, _) {
+        return MaterialApp(
+          title: 'COC 角色卡',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: themeController.themeMode,
+          routes: {
+            '/': (context) => const StartPage(),
+            '/home': (context) => const HomePage(),
+            '/switch_character': (context) => const SwitchCharacterPage(),
+            '/create_character': (context) => const CharacterCreationPage(),
+            '/settings': (context) => const SettingsPage(),
+            '/about': (context) => const AboutPage(),
+            '/skills': (context) => const SkillPage(),
+            '/weapons': (context) => const WeaponPage(),
+            '/reference': (context) => const ReferencePage(),
+            '/ai_character': (context) => const AiCharacterPage(),
+            '/rulebook': (context) => const RulebookReaderPage(),
+          },
+        );
       },
     );
   }

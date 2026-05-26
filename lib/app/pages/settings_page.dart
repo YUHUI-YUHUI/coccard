@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/character_manager.dart';
 import '../setting/app_pref.dart';
+import '../setting/theme_controller.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -86,9 +87,7 @@ class _SettingsPageState extends State<SettingsPage> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(shared
-            ? '备份 JSON 已复制，并已打开分享'
-            : '备份 JSON 已复制到剪贴板'),
+        content: Text(shared ? '备份 JSON 已复制，并已打开分享' : '备份 JSON 已复制到剪贴板'),
       ),
     );
 
@@ -165,7 +164,8 @@ class _SettingsPageState extends State<SettingsPage> {
             child: const Text('追加'),
           ),
           ElevatedButton(
-            onPressed: () => _confirmReplaceImport(dialogContext, jsonCtrl.text),
+            onPressed: () =>
+                _confirmReplaceImport(dialogContext, jsonCtrl.text),
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
               foregroundColor: Theme.of(context).colorScheme.onError,
@@ -254,18 +254,19 @@ class _SettingsPageState extends State<SettingsPage> {
       appBar: AppBar(title: const Text('设置')),
       body: ListView(
         children: [
-          ListTile(
-            leading: const Icon(Icons.dark_mode),
-            title: const Text('深色模式'),
-            subtitle: const Text('开启后将使用深色主题'),
-            trailing: Switch(
-              value: Theme.of(context).brightness == Brightness.dark,
-              onChanged: (value) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('主题切换功能开发中')),
-                );
-              },
-            ),
+          Consumer<ThemeController>(
+            builder: (context, themeController, _) {
+              final darkModeEnabled = themeController.darkModeEnabled;
+              return SwitchListTile(
+                secondary: Icon(
+                  darkModeEnabled ? Icons.dark_mode : Icons.light_mode,
+                ),
+                title: const Text('深色模式'),
+                subtitle: Text(darkModeEnabled ? '已使用深色主题' : '开启后将使用深色主题'),
+                value: darkModeEnabled,
+                onChanged: themeController.setDarkModeEnabled,
+              );
+            },
           ),
           const Divider(),
           ListTile(
@@ -290,15 +291,20 @@ class _SettingsPageState extends State<SettingsPage> {
                 context: context,
                 builder: (context) => AlertDialog(
                   title: const Text('确认清除'),
-                  content: const Text('确定要清除所有数据吗？此操作不可恢复。', style: TextStyle(color: Colors.red)),
+                  content: const Text('确定要清除所有数据吗？此操作不可恢复。',
+                      style: TextStyle(color: Colors.red)),
                   actions: [
-                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+                    TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('取消')),
                     ElevatedButton(
                       onPressed: () {
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('清除数据功能开发中')));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('清除数据功能开发中')));
                       },
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                      style:
+                          ElevatedButton.styleFrom(backgroundColor: Colors.red),
                       child: const Text('确认清除'),
                     ),
                   ],
@@ -325,8 +331,11 @@ class _SettingsPageState extends State<SettingsPage> {
                       hintText: 'sk-...',
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
-                        icon: Icon(_obscureKey ? Icons.visibility_off : Icons.visibility),
-                        onPressed: () => setState(() => _obscureKey = !_obscureKey),
+                        icon: Icon(_obscureKey
+                            ? Icons.visibility_off
+                            : Icons.visibility),
+                        onPressed: () =>
+                            setState(() => _obscureKey = !_obscureKey),
                       ),
                     ),
                   ),
