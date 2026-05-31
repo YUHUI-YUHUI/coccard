@@ -38,10 +38,24 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
   // 职业
   Occupation? _selectedOccupation;
 
+  // 自定义职业（id==1）的可编辑参数
+  static const List<String> _attrChoices = ['无', '力量', '体质', '体型', '敏捷', '外貌', '智力', '意志', '教育'];
+  static const List<int> _multChoices = [0, 1, 2, 3, 4];
+  String _customAttr1 = '教育';
+  int _customMult1 = 4;
+  String _customAttr2 = '无';
+  int _customMult2 = 0;
+  int _customCreditMin = 0;
+  int _customCreditMax = 50;
+  final TextEditingController _customCreditMinCtrl = TextEditingController(text: '0');
+  final TextEditingController _customCreditMaxCtrl = TextEditingController(text: '50');
+
   // 技能分配
   final Map<String, int> _skills = {};
   int _occupationPointSpent = 0;
   int _interestPointSpent = 0;
+  int _creditRating = 0; // 玩家在 creditMin~creditMax 之间分配的信用评级
+  int _creditPointSpent = 0; // 用于信用评级的职业点数（= _creditRating - creditMin）
   String _skillSearchQuery = '';
   final _skillSearchCtrl = TextEditingController();
 
@@ -49,16 +63,31 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
   String _occSearchQuery = '';
   final _occSearchCtrl = TextEditingController();
 
+  bool get _isCustomOccupation => _selectedOccupation?.id == 1;
+
+  /// 自定义职业的属性公式字符串（用 ＋ 分隔，便于 calcOccupationPoints 解析）。
+  String get _customAttrFormula {
+    final parts = <String>[];
+    if (_customAttr1 != '无' && _customMult1 > 0) parts.add('$_customAttr1×$_customMult1');
+    if (_customAttr2 != '无' && _customMult2 > 0) parts.add('$_customAttr2×$_customMult2');
+    return parts.isEmpty ? '教育×0' : parts.join('＋');
+  }
+
+  int get _creditMin => _isCustomOccupation ? _customCreditMin : (_selectedOccupation?.min ?? 0);
+  int get _creditMax => _isCustomOccupation ? _customCreditMax : (_selectedOccupation?.max ?? 99);
+
   int get _occupationPointTotal {
     if (_selectedOccupation == null) return 0;
-    return calcOccupationPoints(_selectedOccupation!.attr, {
+    final attr = _isCustomOccupation ? _customAttrFormula : _selectedOccupation!.attr;
+    return calcOccupationPoints(attr, {
       '力量': str, '体质': con, '体型': siz, '敏捷': dex,
       '外貌': app, '智力': int_, '意志': pow, '教育': edu,
     });
   }
 
   int get _interestPointTotal => int_ * 2;
-  int get _occupationPointRemaining => _occupationPointTotal - _occupationPointSpent;
+  int get _occupationPointRemaining =>
+      _occupationPointTotal - _occupationPointSpent - _creditPointSpent;
   int get _interestPointRemaining => _interestPointTotal - _interestPointSpent;
 
   @override
@@ -73,6 +102,8 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
     _occSearchCtrl.dispose();
     _destinyGroupsCtrl.dispose();
     _pointBuyTotalCtrl.dispose();
+    _customCreditMinCtrl.dispose();
+    _customCreditMaxCtrl.dispose();
     super.dispose();
   }
 
@@ -175,6 +206,10 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
       _occupationPointSpent = 0;
       _interestPointSpent = 0;
 
+      // 信用评级初始化到下限
+      _creditRating = _creditMin;
+      _creditPointSpent = 0;
+
       // 初始化职业技能基础值
       final occSkills = occ.sk.split('，').map((s) => s.trim()).toList();
       for (final skillName in occSkills) {
@@ -195,6 +230,8 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
       _skills.clear();
       _occupationPointSpent = 0;
       _interestPointSpent = 0;
+      _creditRating = 0;
+      _creditPointSpent = 0;
     });
   }
 
@@ -223,13 +260,26 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
     // 如果选了职业，应用职业
     if (_selectedOccupation != null) {
       manager.applyOccupation(_selectedOccupation!);
+
+      // 自定义职业：用玩家自定义的公式/范围覆盖默认值
+      if (_isCustomOccupation) {
+        c.creditMin = _customCreditMin;
+        c.creditMax = _customCreditMax;
+        c.occupationPoint = _occupationPointTotal;
+      }
     }
 
     // 应用技能分配
     for (final entry in _skills.entries) {
       c.skills[entry.key] = entry.value;
     }
-    c.occupationPointSpent = _occupationPointSpent;
+
+    // 信用评级作为技能写入（仅当选了职业）
+    if (_selectedOccupation != null) {
+      c.skills['信用评级'] = _creditRating;
+    }
+
+    c.occupationPointSpent = _occupationPointSpent + _creditPointSpent;
     c.interestPointSpent = _interestPointSpent;
 
     // 保存并跳转到角色卡主页
@@ -366,7 +416,7 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
           ),
           Step(
             title: const Text('技能分配'),
-            subtitle: Text(_skills.isEmpty ? '未分配' : '已分配 ${_occupationPointSpent + _interestPointSpent} 点'),
+            subtitle: Text(_skills.isEmpty ? '未分配' : '已分配 ${_occupationPointSpent + _creditPointSpent + _interestPointSpent} 点'),
             isActive: _currentStep >= 3,
             state: _currentStep > 3 ? StepState.complete : StepState.indexed,
             content: _buildSkillStep(),
@@ -736,19 +786,25 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
       children: [
         Text('从列表中选择职业（可跳过）', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
         const SizedBox(height: 8),
-        if (_selectedOccupation != null)
+        if (_selectedOccupation != null) ...[
           Card(
             child: ListTile(
               leading: Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
               title: Text(_selectedOccupation!.n),
-              subtitle: Text('信用: ${_selectedOccupation!.min}-${_selectedOccupation!.max} | ${_selectedOccupation!.attr}'),
+              subtitle: Text(_isCustomOccupation
+                  ? '信用: $_creditMin-$_creditMax | ${_customAttrFormula.replaceAll('＋', ' + ')}'
+                  : '信用: ${_selectedOccupation!.min}-${_selectedOccupation!.max} | ${_selectedOccupation!.attr}'),
               trailing: IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: _onOccupationCleared,
               ),
             ),
-          )
-        else ...[
+          ),
+          if (_isCustomOccupation) ...[
+            const SizedBox(height: 8),
+            _buildCustomOccupationEditor(),
+          ],
+        ] else ...[
           TextField(
             controller: _occSearchCtrl,
             decoration: InputDecoration(
@@ -805,6 +861,139 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
     );
   }
 
+  Widget _buildCustomOccupationEditor() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('自定义职业属性公式',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
+          const SizedBox(height: 4),
+          const Text('职业点 = 属性1×倍数1 + 属性2×倍数2', style: TextStyle(fontSize: 12)),
+          const SizedBox(height: 12),
+          _customAttrRow(
+            label: '主属性',
+            attr: _customAttr1,
+            mult: _customMult1,
+            onAttr: (v) => setState(() => _customAttr1 = v),
+            onMult: (v) => setState(() => _customMult1 = v),
+          ),
+          const SizedBox(height: 8),
+          _customAttrRow(
+            label: '副属性',
+            attr: _customAttr2,
+            mult: _customMult2,
+            onAttr: (v) => setState(() => _customAttr2 = v),
+            onMult: (v) => setState(() => _customMult2 = v),
+          ),
+          const SizedBox(height: 12),
+          Text('当前职业点数: $_occupationPointTotal',
+              style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+          const Divider(height: 24),
+          Text('自定义信用评级范围',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Text('下限: '),
+              SizedBox(
+                width: 70,
+                child: TextField(
+                  controller: _customCreditMinCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(isDense: true),
+                  onChanged: (v) {
+                    final n = int.tryParse(v) ?? 0;
+                    setState(() {
+                      _customCreditMin = n.clamp(0, 99);
+                      if (_customCreditMax < _customCreditMin) {
+                        _customCreditMax = _customCreditMin;
+                        _customCreditMaxCtrl.text = '$_customCreditMax';
+                      }
+                      if (_creditRating < _customCreditMin) _creditRating = _customCreditMin;
+                      if (_creditRating > _customCreditMax) _creditRating = _customCreditMax;
+                      _creditPointSpent = _creditRating - _customCreditMin;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: 16),
+              const Text('上限: '),
+              SizedBox(
+                width: 70,
+                child: TextField(
+                  controller: _customCreditMaxCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(isDense: true),
+                  onChanged: (v) {
+                    final n = int.tryParse(v) ?? 0;
+                    setState(() {
+                      _customCreditMax = n.clamp(0, 99);
+                      if (_customCreditMax < _customCreditMin) {
+                        _customCreditMin = _customCreditMax;
+                        _customCreditMinCtrl.text = '$_customCreditMin';
+                      }
+                      if (_creditRating > _customCreditMax) _creditRating = _customCreditMax;
+                      if (_creditRating < _customCreditMin) _creditRating = _customCreditMin;
+                      _creditPointSpent = _creditRating - _customCreditMin;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _customAttrRow({
+    required String label,
+    required String attr,
+    required int mult,
+    required void Function(String) onAttr,
+    required void Function(int) onMult,
+  }) {
+    return Row(
+      children: [
+        SizedBox(width: 56, child: Text(label, style: const TextStyle(fontSize: 14))),
+        Expanded(
+          child: DropdownButton<String>(
+            isExpanded: true,
+            value: attr,
+            items: _attrChoices
+                .map((a) => DropdownMenuItem(value: a, child: Text(a)))
+                .toList(),
+            onChanged: (v) {
+              if (v != null) onAttr(v);
+            },
+          ),
+        ),
+        const SizedBox(width: 8),
+        const Text('×'),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 64,
+          child: DropdownButton<int>(
+            isExpanded: true,
+            value: mult,
+            items: _multChoices
+                .map((m) => DropdownMenuItem(value: m, child: Text('$m')))
+                .toList(),
+            onChanged: (v) {
+              if (v != null) onMult(v);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSkillStep() {
     if (!_attributesReady) {
       return Text(
@@ -813,7 +1002,7 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
       );
     }
 
-    final totalSpent = _occupationPointSpent + _interestPointSpent;
+    final totalSpent = _occupationPointSpent + _creditPointSpent + _interestPointSpent;
     final occSkills = _selectedOccupation?.sk.split('，').map((s) => s.trim()).toSet() ?? {};
 
     // 过滤技能列表
@@ -885,6 +1074,12 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
           ),
         ),
         const SizedBox(height: 12),
+
+        // 信用评级（COC 7 版作为技能，用职业点数分配）
+        if (_selectedOccupation != null) ...[
+          _buildCreditRatingTile(),
+          const SizedBox(height: 12),
+        ],
 
         // 搜索框
         TextField(
@@ -960,12 +1155,95 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-              '已分配: 职业 $_occupationPointSpent 点 + 兴趣 $_interestPointSpent 点 = 共 $totalSpent 点',
+              '已分配: 职业 ${_occupationPointSpent + _creditPointSpent} 点 + 兴趣 $_interestPointSpent 点 = 共 $totalSpent 点',
               style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
       ],
     );
+  }
+
+  Widget _buildCreditRatingTile() {
+    final min = _creditMin;
+    final max = _creditMax;
+    final divisions = (max - min) > 0 ? (max - min) : 1;
+    final clamped = _creditRating.clamp(min, max);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.orange.withOpacity(0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.account_balance_wallet, color: Colors.orange, size: 18),
+              const SizedBox(width: 6),
+              const Text('信用评级', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              const Spacer(),
+              Text('$clamped%',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.orange)),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text('范围 $min - $max  |  使用职业点数分配',
+              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.remove_circle_outline, size: 20),
+                onPressed: clamped > min ? () => _setCreditRating(clamped - 1) : null,
+                visualDensity: VisualDensity.compact,
+              ),
+              Expanded(
+                child: Slider(
+                  value: clamped.toDouble(),
+                  min: min.toDouble(),
+                  max: max.toDouble().clamp(min.toDouble() + 1, 99),
+                  divisions: divisions,
+                  label: '$clamped',
+                  onChanged: max > min ? (v) => _setCreditRating(v.round()) : null,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add_circle_outline, size: 20),
+                onPressed: clamped < max ? () => _setCreditRating(clamped + 1) : null,
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 将信用评级设为给定值，自动校验职业点数余量。
+  void _setCreditRating(int target) {
+    final min = _creditMin;
+    final max = _creditMax;
+    final clamped = target.clamp(min, max);
+    final delta = clamped - min;
+    // 检查职业点数是否够（仅当增加时）
+    final extraNeeded = delta - _creditPointSpent;
+    if (extraNeeded > 0 && extraNeeded > _occupationPointRemaining) {
+      // 不够：限制到当前可达的最大值
+      final maxAffordable = min + _creditPointSpent + _occupationPointRemaining;
+      setState(() {
+        _creditRating = maxAffordable.clamp(min, max);
+        _creditPointSpent = _creditRating - min;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('职业点数不足')),
+      );
+      return;
+    }
+    setState(() {
+      _creditRating = clamped;
+      _creditPointSpent = delta;
+    });
   }
 
   String _getCategoryName(SkillCategory category) {
@@ -1083,7 +1361,7 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
   }
 
   Widget _buildConfirmStep() {
-    final totalSpent = _occupationPointSpent + _interestPointSpent;
+    final totalSpent = _occupationPointSpent + _creditPointSpent + _interestPointSpent;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1099,6 +1377,12 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
                 _confirmRow('角色名', _nameCtrl.text.isEmpty ? '新角色' : _nameCtrl.text),
                 _confirmRow('玩家', _playerCtrl.text.isEmpty ? '—' : _playerCtrl.text),
                 _confirmRow('职业', _selectedOccupation?.n ?? '未选择'),
+                if (_selectedOccupation != null) ...[
+                  _confirmRow('职业公式',
+                      _isCustomOccupation ? _customAttrFormula.replaceAll('＋', ' + ') : _selectedOccupation!.attr),
+                  _confirmRow('信用范围', '$_creditMin - $_creditMax'),
+                  _confirmRow('信用评级', '$_creditRating%'),
+                ],
                 const Divider(),
                 const Text('属性', style: TextStyle(fontWeight: FontWeight.bold)),
                 _confirmRow('分配方式', _allocRule.label),
@@ -1107,7 +1391,8 @@ class _CharacterCreationPageState extends State<CharacterCreationPage> {
                 _confirmRow('运气', '$luck'),
                 const Divider(),
                 Text('技能分配', style: TextStyle(fontWeight: FontWeight.bold)),
-                _confirmRow('已分配点数', '$totalSpent 点（职业 $_occupationPointSpent + 兴趣 $_interestPointSpent）'),
+                _confirmRow('已分配点数',
+                    '$totalSpent 点（职业 ${_occupationPointSpent + _creditPointSpent} + 兴趣 $_interestPointSpent）'),
                 _confirmRow('技能数量', '${_skills.length} 项'),
                 const SizedBox(height: 8),
                 Text(
