@@ -40,4 +40,34 @@ class AppPreferences {
   Future<void> setDeepseekApiKey(String key) async {
     await _prefs.setString(_deepseekApiKeyKey, key);
   }
+
+  // ===== 图像生成（头像）配置 =====
+  static const String _imageProviderKey = 'image_provider';
+  static const String _imageApiKeyKey = 'image_api_key';
+  static const String _imageModelKey = 'image_model';
+
+  /// 取 provider 字符串（对应 ImageGenProvider.name）。默认 stub。
+  String getImageProvider() {
+    return _prefs.getString(_imageProviderKey) ?? 'stub';
+  }
+
+  Future<void> setImageProvider(String name) async {
+    await _prefs.setString(_imageProviderKey, name);
+  }
+
+  String getImageApiKey() {
+    return _prefs.getString(_imageApiKeyKey) ?? '';
+  }
+
+  Future<void> setImageApiKey(String key) async {
+    await _prefs.setString(_imageApiKeyKey, key);
+  }
+
+  String getImageModel() {
+    return _prefs.getString(_imageModelKey) ?? '';
+  }
+
+  Future<void> setImageModel(String model) async {
+    await _prefs.setString(_imageModelKey, model);
+  }
 }

@@ -9,6 +9,7 @@ import '../data/skill.dart';
 import '../data/allocation_rule.dart';
 import '../services/deepseek_service.dart';
 import '../setting/app_pref.dart';
+import '../widgets/avatar_widget.dart';
 
 class AiCharacterPage extends StatefulWidget {
   const AiCharacterPage({super.key});
@@ -354,8 +355,37 @@ class _AiCharacterPageState extends State<AiCharacterPage> {
     manager.updateFinance(cash: int.tryParse(_cashCtrl.text) ?? 0);
 
     manager.selectCharacter(c.id);
+
+    // 可选：让用户立刻 AI 生成头像（已配置 provider 才提示）
+    if (mounted) {
+      await _maybeOfferAvatarGeneration();
+    }
+
     if (mounted) {
       Navigator.pushReplacementNamed(context, '/home');
+    }
+  }
+
+  Future<void> _maybeOfferAvatarGeneration() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    final appPref = AppPreferences(prefs);
+    final provider = appPref.getImageProvider();
+    if (provider == 'stub' || appPref.getImageApiKey().trim().isEmpty) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('生成 AI 头像？'),
+        content: const Text('已为角色生成完毕。是否现在用 AI 生成头像？将以「外貌描述」为提示词。'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('跳过')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('生成头像')),
+        ],
+      ),
+    );
+    if (confirm == true && mounted) {
+      await showAvatarAiDialog(context);
     }
   }
 

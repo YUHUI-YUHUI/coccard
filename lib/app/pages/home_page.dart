@@ -7,6 +7,7 @@ import '../widgets/derived_stats_widget.dart';
 import '../widgets/dice_roller.dart';
 import '../widgets/app_drawer_widget.dart';
 import '../widgets/delete_character_dialog.dart';
+import '../widgets/avatar_widget.dart';
 import '../data/coc_data.dart';
 import '../services/pdf_generator.dart';
 
@@ -142,12 +143,26 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             const Divider(),
-            _infoRow('玩家', character.player),
-            _infoRow('职业', character.occupation.isEmpty ? '未选择' : character.occupation),
-            _infoRow('年龄', character.age),
-            _infoRow('性别', character.gender),
-            _infoRow('居住地', character.residence),
-            _infoRow('出生地', character.birthplace),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const AvatarWidget(size: 72),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _infoRow('玩家', character.player),
+                      _infoRow('职业', character.occupation.isEmpty ? '未选择' : character.occupation),
+                      _infoRow('年龄', character.age),
+                      _infoRow('性别', character.gender),
+                      _infoRow('居住地', character.residence),
+                      _infoRow('出生地', character.birthplace),
+                    ],
+                  ),
+                ),
+              ],
+            ),
             if (character.appearance.isNotEmpty) ...[
               const Divider(),
               const Text('外貌', style: TextStyle(fontWeight: FontWeight.bold)),

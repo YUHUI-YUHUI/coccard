@@ -438,6 +438,15 @@ class CharacterManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 设置头像。[localPath] 为 app docs 中的绝对路径（可为 null 表示清除）；
+  /// [url] 可选地保留原始远程地址供调试。
+  void setAvatar({String? localPath, String? url}) {
+    character.avatarLocalPath = localPath;
+    character.avatarUrl = url;
+    _saveCharacters();
+    notifyListeners();
+  }
+
   void updateItems(List<CharacterItem> items) {
     character.items = items;
     _saveCharacters();

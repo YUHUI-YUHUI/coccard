@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/character_manager.dart';
+import '../services/image_generator.dart';
 import '../setting/app_pref.dart';
 import '../setting/theme_controller.dart';
 
@@ -22,6 +23,12 @@ class _SettingsPageState extends State<SettingsPage> {
   final TextEditingController _apiKeyCtrl = TextEditingController();
   bool _obscureKey = true;
 
+  // 图像生成配置
+  ImageGenProvider _imageProvider = ImageGenProvider.stub;
+  final TextEditingController _imageApiKeyCtrl = TextEditingController();
+  final TextEditingController _imageModelCtrl = TextEditingController();
+  bool _obscureImageKey = true;
+
   @override
   void initState() {
     super.initState();
@@ -33,7 +40,23 @@ class _SettingsPageState extends State<SettingsPage> {
     final appPref = AppPreferences(prefs);
     setState(() {
       _apiKeyCtrl.text = appPref.getDeepseekApiKey();
+      _imageProvider = ImageGenProvider.fromKey(appPref.getImageProvider());
+      _imageApiKeyCtrl.text = appPref.getImageApiKey();
+      _imageModelCtrl.text = appPref.getImageModel();
     });
+  }
+
+  Future<void> _saveImageSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final appPref = AppPreferences(prefs);
+    await appPref.setImageProvider(_imageProvider.name);
+    await appPref.setImageApiKey(_imageApiKeyCtrl.text.trim());
+    await appPref.setImageModel(_imageModelCtrl.text.trim());
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('图像生成设置已保存')),
+      );
+    }
   }
 
   Future<void> _saveApiKey() async {
@@ -245,6 +268,8 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void dispose() {
     _apiKeyCtrl.dispose();
+    _imageApiKeyCtrl.dispose();
+    _imageModelCtrl.dispose();
     super.dispose();
   }
 
@@ -346,6 +371,70 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
           const SizedBox(height: 8),
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text('头像图像生成', style: Theme.of(context).textTheme.titleSmall),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: DropdownButtonFormField<ImageGenProvider>(
+              value: _imageProvider,
+              decoration: const InputDecoration(
+                labelText: '图像服务提供商',
+                border: OutlineInputBorder(),
+              ),
+              items: ImageGenProvider.values
+                  .map((p) => DropdownMenuItem(value: p, child: Text(p.label)))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) setState(() => _imageProvider = v);
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              controller: _imageApiKeyCtrl,
+              obscureText: _obscureImageKey,
+              decoration: InputDecoration(
+                labelText: '图像服务 API Key',
+                hintText: _imageProvider == ImageGenProvider.stub ? '请先选择提供商' : '粘贴对应的 API Key',
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: Icon(_obscureImageKey ? Icons.visibility_off : Icons.visibility),
+                  onPressed: () => setState(() => _obscureImageKey = !_obscureImageKey),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              controller: _imageModelCtrl,
+              decoration: InputDecoration(
+                labelText: '模型（留空使用默认）',
+                hintText: _imageProvider == ImageGenProvider.siliconflow
+                    ? 'black-forest-labs/FLUX.1-schnell'
+                    : (_imageProvider == ImageGenProvider.zhipu ? 'cogview-4' : ''),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton(
+                onPressed: _saveImageSettings,
+                child: const Text('保存图像设置'),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           const Divider(),
           const ListTile(
             leading: Icon(Icons.info),

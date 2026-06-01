@@ -49,6 +49,7 @@ class Character {
   int assets;
 
   String? avatarUrl;
+  String? avatarLocalPath;
 
   String appearance;
   List<CharacterWeapon> weapons;
@@ -96,6 +97,7 @@ class Character {
     this.spending = 0,
     this.assets = 0,
     this.avatarUrl,
+    this.avatarLocalPath,
     this.appearance = '',
     List<CharacterWeapon>? weapons,
     List<CharacterItem>? items,
@@ -146,6 +148,7 @@ class Character {
       'spending': spending,
       'assets': assets,
       'avatarUrl': avatarUrl,
+      'avatarLocalPath': avatarLocalPath,
       'appearance': appearance,
       'weapons': weapons.map((w) => w.toJson()).toList(),
       'items': items.map((i) => i.toJson()).toList(),
@@ -195,6 +198,7 @@ class Character {
       spending: json['spending'] ?? 0,
       assets: json['assets'] ?? 0,
       avatarUrl: json['avatarUrl'],
+      avatarLocalPath: json['avatarLocalPath'],
       appearance: json['appearance'] ?? '',
       luckDice: json['luckDice'] ?? 3,
       weapons: (json['weapons'] as List<dynamic>?)
