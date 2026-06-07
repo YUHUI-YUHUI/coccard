@@ -6,8 +6,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/character_manager.dart';
+import '../data/check_rule.dart';
 import '../services/image_generator.dart';
 import '../setting/app_pref.dart';
+import '../setting/check_rule_controller.dart';
 import '../setting/theme_controller.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -265,6 +267,173 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _showCheckRuleDialog(
+    BuildContext context,
+    CheckRuleController ruleController,
+  ) async {
+    var current = ruleController.profile;
+    final isPreset =
+        CheckRuleProfile.presets.any((p) => p.id == current.id);
+    var selectedPresetId = isPreset ? current.id : 'custom';
+
+    final criticalMaxCtrl = TextEditingController(
+      text: current.criticalMax.toString(),
+    );
+    final fumbleMinCtrl = TextEditingController(
+      text: current.fumbleMin.toString(),
+    );
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          void selectPreset(String id) {
+            selectedPresetId = id;
+            if (id != 'custom') {
+              final preset = CheckRuleProfile.presets.firstWhere(
+                (p) => p.id == id,
+              );
+              current = preset;
+              criticalMaxCtrl.text = preset.criticalMax.toString();
+              fumbleMinCtrl.text = preset.fumbleMin.toString();
+            }
+            setDialogState(() {});
+          }
+
+          return AlertDialog(
+            title: const Text('D100 检定规则'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final preset in CheckRuleProfile.presets)
+                    RadioListTile<String>(
+                      value: preset.id,
+                      groupValue: selectedPresetId,
+                      onChanged: (v) {
+                        if (v != null) selectPreset(v);
+                      },
+                      title: Text(preset.name),
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                    ),
+                  RadioListTile<String>(
+                    value: 'custom',
+                    groupValue: selectedPresetId,
+                    onChanged: (v) {
+                      if (v != null) selectPreset(v);
+                    },
+                    title: const Text('自定义'),
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                  ),
+                  const SizedBox(height: 8),
+                  if (selectedPresetId == 'custom') ...[
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: criticalMaxCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: '大成功上限（1-99，含）',
+                        helperText: '掷出 1 到该值视为大成功',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: fumbleMinCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: '大失败下限（2-100，含）',
+                        helperText: '掷出该值到 100 视为大失败',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ] else ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        _describeRule(current),
+                        style: TextStyle(
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('取消'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final CheckRuleProfile next;
+                  if (selectedPresetId == 'custom') {
+                    final critMax = int.tryParse(criticalMaxCtrl.text.trim());
+                    final fumbleMin = int.tryParse(fumbleMinCtrl.text.trim());
+                    if (critMax == null ||
+                        critMax < 1 ||
+                        critMax > 99 ||
+                        fumbleMin == null ||
+                        fumbleMin < 2 ||
+                        fumbleMin > 100 ||
+                        critMax >= fumbleMin) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content:
+                              Text('阈值不合法：大成功上限 < 大失败下限，1-99/2-100'),
+                        ),
+                      );
+                      return;
+                    }
+                    next = CheckRuleProfile(
+                      id: 'custom',
+                      name: '自定义（1-$critMax / $fumbleMin-100）',
+                      criticalMode: CriticalRuleMode.fixedRange,
+                      criticalMax: critMax,
+                      fumbleMode: FumbleRuleMode.fixedRange,
+                      fumbleMin: fumbleMin,
+                      allowSpendLuck: ruleController.profile.allowSpendLuck,
+                    );
+                  } else {
+                    next = current;
+                  }
+                  final messenger = ScaffoldMessenger.of(context);
+                  await ruleController.setProfile(next);
+                  if (!dialogContext.mounted) return;
+                  Navigator.pop(dialogContext);
+                  messenger.showSnackBar(
+                    SnackBar(content: Text('已应用规则：${next.name}')),
+                  );
+                },
+                child: const Text('保存'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    criticalMaxCtrl.dispose();
+    fumbleMinCtrl.dispose();
+  }
+
+  String _describeRule(CheckRuleProfile rule) {
+    final crit = rule.criticalMode == CriticalRuleMode.oneOnly
+        ? '大成功：仅 1'
+        : '大成功：1-${rule.criticalMax}';
+    final fumble = rule.fumbleMode == FumbleRuleMode.coc7
+        ? '大失败：目标 <50 时 96-100，否则仅 100'
+        : '大失败：${rule.fumbleMin}-100';
+    return '$crit\n$fumble';
+  }
+
   @override
   void dispose() {
     _apiKeyCtrl.dispose();
@@ -290,6 +459,18 @@ class _SettingsPageState extends State<SettingsPage> {
                 subtitle: Text(darkModeEnabled ? '已使用深色主题' : '开启后将使用深色主题'),
                 value: darkModeEnabled,
                 onChanged: themeController.setDarkModeEnabled,
+              );
+            },
+          ),
+          const Divider(),
+          Consumer<CheckRuleController>(
+            builder: (context, ruleController, _) {
+              return ListTile(
+                leading: const Icon(Icons.rule),
+                title: const Text('D100 检定规则'),
+                subtitle: Text(ruleController.profile.name),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _showCheckRuleDialog(context, ruleController),
               );
             },
           ),

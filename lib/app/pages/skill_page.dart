@@ -5,56 +5,14 @@ import 'package:provider/provider.dart';
 
 import '../data/character_manager.dart';
 import '../data/character.dart';
+import '../data/check_rule.dart';
 import '../data/coc_data.dart';
 import '../data/skill.dart';
+import '../setting/check_rule_controller.dart';
 
 enum _SkillListFilter { occupation, added, recommended, all }
 
-enum _SkillCheckLevel { critical, extreme, hard, regular, failure, fumble }
-
-class _SkillCheckResult {
-  final int roll;
-  final int skillValue;
-  final int hardValue;
-  final int extremeValue;
-  final _SkillCheckLevel level;
-
-  const _SkillCheckResult({
-    required this.roll,
-    required this.skillValue,
-    required this.hardValue,
-    required this.extremeValue,
-    required this.level,
-  });
-
-  bool get isSuccess {
-    return level == _SkillCheckLevel.critical ||
-        level == _SkillCheckLevel.extreme ||
-        level == _SkillCheckLevel.hard ||
-        level == _SkillCheckLevel.regular;
-  }
-
-  bool get canUseLuck => level == _SkillCheckLevel.failure;
-
-  int get luckCost => roll - skillValue;
-
-  String get resultText {
-    switch (level) {
-      case _SkillCheckLevel.critical:
-        return '大成功';
-      case _SkillCheckLevel.extreme:
-        return '极难成功';
-      case _SkillCheckLevel.hard:
-        return '困难成功';
-      case _SkillCheckLevel.regular:
-        return '普通成功';
-      case _SkillCheckLevel.failure:
-        return '失败';
-      case _SkillCheckLevel.fumble:
-        return '大失败';
-    }
-  }
-}
+const D100CheckEvaluator _evaluator = D100CheckEvaluator();
 
 class SkillPage extends StatefulWidget {
   const SkillPage({super.key});
@@ -89,6 +47,8 @@ class _SkillPageState extends State<SkillPage>
         title: const Text('技能'),
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           tabs: const [
             Tab(text: '本职'),
             Tab(text: '已加点'),
@@ -536,11 +496,20 @@ class _SkillPageState extends State<SkillPage>
   ) {
     final random = Random();
     final roll = random.nextInt(100) + 1;
-    final result = _evaluateSkillCheck(skillValue, roll);
+    final rule = context.read<CheckRuleController>().profile;
+    final result = _evaluator.evaluate(
+      target: skillValue,
+      roll: roll,
+      rule: rule,
+    );
+    manager.recordSkillCheck(result, skillName);
+
     final luckCost = result.luckCost;
     final currentLuck = manager.character.luck;
-    final canSpendLuck =
-        result.canUseLuck && luckCost > 0 && luckCost <= currentLuck;
+    final canSpendLuck = rule.allowSpendLuck &&
+        result.canUseLuck &&
+        luckCost > 0 &&
+        luckCost <= currentLuck;
     final resultColor = result.isSuccess
         ? Theme.of(context).colorScheme.tertiary
         : Theme.of(context).colorScheme.error;
@@ -583,10 +552,18 @@ class _SkillPageState extends State<SkillPage>
                 _checkInfoChip('当前幸运', '$currentLuck'),
               ],
             ),
+            const SizedBox(height: 8),
+            Text(
+              '规则：${rule.name}',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
             if (!result.isSuccess) ...[
               const SizedBox(height: 16),
               Text(
-                _luckHintText(result, currentLuck),
+                _luckHintText(result, currentLuck, rule),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -600,6 +577,12 @@ class _SkillPageState extends State<SkillPage>
             TextButton.icon(
               onPressed: () {
                 final spent = manager.spendLuck(luckCost);
+                if (spent) {
+                  manager.markLastCheckLuckSpent(
+                    skillName: skillName,
+                    luckCost: luckCost,
+                  );
+                }
                 Navigator.pop(dialogContext);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -623,36 +606,6 @@ class _SkillPageState extends State<SkillPage>
     );
   }
 
-  _SkillCheckResult _evaluateSkillCheck(int skillValue, int roll) {
-    final target = max(0, skillValue);
-    final hardValue = target ~/ 2;
-    final extremeValue = target ~/ 5;
-    final isFumble = target < 50 ? roll >= 96 : roll == 100;
-
-    late final _SkillCheckLevel level;
-    if (isFumble) {
-      level = _SkillCheckLevel.fumble;
-    } else if (roll == 1) {
-      level = _SkillCheckLevel.critical;
-    } else if (roll <= extremeValue) {
-      level = _SkillCheckLevel.extreme;
-    } else if (roll <= hardValue) {
-      level = _SkillCheckLevel.hard;
-    } else if (roll <= target) {
-      level = _SkillCheckLevel.regular;
-    } else {
-      level = _SkillCheckLevel.failure;
-    }
-
-    return _SkillCheckResult(
-      roll: roll,
-      skillValue: target,
-      hardValue: hardValue,
-      extremeValue: extremeValue,
-      level: level,
-    );
-  }
-
   Widget _checkInfoChip(String label, String value) {
     return Chip(
       visualDensity: VisualDensity.compact,
@@ -660,9 +613,16 @@ class _SkillPageState extends State<SkillPage>
     );
   }
 
-  String _luckHintText(_SkillCheckResult result, int currentLuck) {
-    if (result.level == _SkillCheckLevel.fumble) {
+  String _luckHintText(
+    SkillCheckResult result,
+    int currentLuck,
+    CheckRuleProfile rule,
+  ) {
+    if (result.level == SkillCheckLevel.fumble) {
       return '大失败不能通过花费幸运补正';
+    }
+    if (!rule.allowSpendLuck) {
+      return '当前规则禁用幸运补正';
     }
 
     final cost = result.luckCost;

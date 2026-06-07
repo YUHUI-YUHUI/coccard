@@ -1,12 +1,38 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
+import '../data/check_rule.dart';
 import 'secrets.dart';
 
 class AppPreferences {
   final SharedPreferences _prefs;
   static const String _lastCharacterIdKey = 'last_character_id';
   static const String _darkModeEnabledKey = 'dark_mode_enabled';
+  static const String _checkRuleProfileKey = 'check_rule_profile';
 
   AppPreferences(this._prefs);
+
+  /// 取检定规则配置。任何异常或缺失都回退到 COC7 默认。
+  CheckRuleProfile getCheckRuleProfile() {
+    final raw = _prefs.getString(_checkRuleProfileKey);
+    if (raw == null || raw.isEmpty) return CheckRuleProfile.coc7Default;
+    try {
+      final json = jsonDecode(raw);
+      if (json is Map<String, dynamic>) {
+        return CheckRuleProfile.fromJson(json);
+      }
+    } catch (_) {
+      // 落入默认
+    }
+    return CheckRuleProfile.coc7Default;
+  }
+
+  Future<void> setCheckRuleProfile(CheckRuleProfile profile) async {
+    await _prefs.setString(
+      _checkRuleProfileKey,
+      jsonEncode(profile.toJson()),
+    );
+  }
 
   // 获取最后使用的角色ID
   int? getLastCharacterId() {

@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'character.dart';
+import 'check_rule.dart';
 import 'skill.dart';
+import 'skill_check_record.dart';
 import 'coc_data.dart';
 
 class DeletedCharacter {
@@ -573,6 +575,87 @@ class CharacterManager extends ChangeNotifier {
     _saveCharacters();
     notifyListeners();
     return true;
+  }
+
+  static const int _maxSkillCheckRecords = 200;
+
+  /// 记录一次技能检定，更新成长统计；超出 [_maxSkillCheckRecords] 时裁掉最旧的日志。
+  /// 聚合统计 (skillGrowth) 不随裁剪而丢失。
+  void recordSkillCheck(SkillCheckResult result, String skillName) {
+    if (_characters.isEmpty) return;
+    final c = character;
+    final now = DateTime.now();
+    final record = SkillCheckRecord(
+      id: '${now.microsecondsSinceEpoch}',
+      skillName: skillName,
+      skillValue: result.skillValue,
+      roll: result.roll,
+      level: result.level,
+      finalSuccess: result.isSuccess,
+      ruleProfileId: result.ruleProfileId,
+      createdAt: now,
+    );
+
+    c.skillCheckRecords.add(record);
+    if (c.skillCheckRecords.length > _maxSkillCheckRecords) {
+      c.skillCheckRecords.removeRange(
+        0,
+        c.skillCheckRecords.length - _maxSkillCheckRecords,
+      );
+    }
+
+    final growth = c.skillGrowth[skillName] ??
+        SkillGrowthState(skillName: skillName);
+    if (result.isSuccess) {
+      growth.successCount += 1;
+      growth.growthMarked = true;
+    } else {
+      growth.failureCount += 1;
+    }
+    growth.lastCheckedAt = now;
+    c.skillGrowth[skillName] = growth;
+
+    _saveCharacters();
+    notifyListeners();
+  }
+
+  /// 玩家花费幸运补正后，将最近一次检定记录改写为成功，并补登成长标记。
+  void markLastCheckLuckSpent({
+    required String skillName,
+    required int luckCost,
+  }) {
+    if (_characters.isEmpty) return;
+    final c = character;
+    if (c.skillCheckRecords.isEmpty) return;
+
+    final lastIndex = c.skillCheckRecords.length - 1;
+    final last = c.skillCheckRecords[lastIndex];
+    if (last.skillName != skillName) return;
+
+    c.skillCheckRecords[lastIndex] = SkillCheckRecord(
+      id: last.id,
+      skillName: last.skillName,
+      skillValue: last.skillValue,
+      roll: last.roll,
+      level: last.level,
+      finalSuccess: true,
+      luckSpent: true,
+      luckCost: luckCost,
+      ruleProfileId: last.ruleProfileId,
+      createdAt: last.createdAt,
+    );
+
+    final growth = c.skillGrowth[skillName] ??
+        SkillGrowthState(skillName: skillName);
+    if (!last.finalSuccess) {
+      growth.failureCount = (growth.failureCount - 1).clamp(0, 1 << 30);
+      growth.successCount += 1;
+      growth.growthMarked = true;
+      c.skillGrowth[skillName] = growth;
+    }
+
+    _saveCharacters();
+    notifyListeners();
   }
 
   void loseSanity(int amount) {

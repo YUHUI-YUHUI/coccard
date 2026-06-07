@@ -1,3 +1,5 @@
+import 'skill_check_record.dart';
+
 class CharacterItem {
   String name;
   int count;
@@ -57,6 +59,9 @@ class Character {
   Map<String, int> skills;
   int luckDice;
 
+  List<SkillCheckRecord> skillCheckRecords;
+  Map<String, SkillGrowthState> skillGrowth;
+
   Character({
     this.id = 0,
     this.name = '',
@@ -103,9 +108,13 @@ class Character {
     List<CharacterItem>? items,
     Map<String, int>? skills,
     this.luckDice = 3,
+    List<SkillCheckRecord>? skillCheckRecords,
+    Map<String, SkillGrowthState>? skillGrowth,
   })  : weapons = weapons ?? [],
         items = items ?? [],
-        skills = skills ?? {};
+        skills = skills ?? {},
+        skillCheckRecords = skillCheckRecords ?? [],
+        skillGrowth = skillGrowth ?? {};
 
   Map<String, dynamic> toJson() {
     return {
@@ -154,6 +163,8 @@ class Character {
       'items': items.map((i) => i.toJson()).toList(),
       'skills': skills,
       'luckDice': luckDice,
+      'skillCheckRecords': skillCheckRecords.map((r) => r.toJson()).toList(),
+      'skillGrowth': skillGrowth.map((k, v) => MapEntry(k, v.toJson())),
     };
   }
 
@@ -211,6 +222,18 @@ class Character {
           [],
       skills: (json['skills'] as Map<String, dynamic>?)?.map(
             (k, v) => MapEntry(k, v as int),
+          ) ??
+          {},
+      skillCheckRecords: (json['skillCheckRecords'] as List<dynamic>?)
+              ?.map((r) =>
+                  SkillCheckRecord.fromJson(Map<String, dynamic>.from(r as Map)))
+              .toList() ??
+          [],
+      skillGrowth: (json['skillGrowth'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(
+              k,
+              SkillGrowthState.fromJson(Map<String, dynamic>.from(v as Map)),
+            ),
           ) ??
           {},
     );
