@@ -22,3 +22,15 @@ AGENTS.md
 # Secrets (API keys, etc.) — see secrets.dart.example for template
 lib/app/setting/secrets.dart
 !lib/app/setting/secrets.dart.example
+
+# AI-tooling context (local only — not for public remote)
+.claude/
+
+# Daily cron run logs (machine-generated, not source code)
+docs/daily-runs/result-*.md
+docs/daily-runs/run-*.log
+docs/daily-runs/push-*.txt
+docs/daily-runs/cost-*.json
+
+# Flutter auto-regenerated
+.flutter-plugins-dependencies
