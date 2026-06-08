@@ -523,16 +523,20 @@ class _ReferencePageState extends State<ReferencePage> with SingleTickerProvider
 
   void _rollInsanity(String type) {
     final roll = _random.nextInt(10) + 1;
+    final durationRoll = _random.nextInt(10) + 1;
     String title;
     String text;
+    String durationUnit;
     if (type == 'tmp') {
       final item = INSANITY_TMP[roll - 1];
-      title = '即时症状 #$roll';
+      title = '即时症状 #$roll，持续 $durationRoll 轮';
       text = item.text;
+      durationUnit = '轮';
     } else {
       final item = INSANITY_LONG[roll - 1];
-      title = '长期症状 #$roll';
+      title = '长期症状 #$roll，持续 $durationRoll 小时';
       text = item.text;
+      durationUnit = '小时';
     }
     showDialog(
       context: context,
@@ -540,6 +544,24 @@ class _ReferencePageState extends State<ReferencePage> with SingleTickerProvider
         title: Row(children: [const Icon(Icons.psychology, color: Colors.purple), const SizedBox(width: 8), Text(title)]),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(text, style: const TextStyle(fontSize: 16)),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.purple.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(children: [
+              const Icon(Icons.casino, size: 18, color: Colors.purple),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '本次投出：症状 #$roll · 持续 $durationRoll $durationUnit',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.purple),
+                ),
+              ),
+            ]),
+          ),
           const SizedBox(height: 16),
           const Text('⚠️ 理智值可能下降', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
         ]),
