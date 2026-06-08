@@ -8,6 +8,7 @@ import '../data/character.dart';
 import '../data/check_rule.dart';
 import '../data/coc_data.dart';
 import '../data/skill.dart';
+import '../data/skill_check_record.dart';
 import '../setting/check_rule_controller.dart';
 
 enum _SkillListFilter { occupation, added, recommended, all }
@@ -225,12 +226,25 @@ class _SkillPageState extends State<SkillPage>
       itemBuilder: (context, index) {
         final skill = filteredSkills[index];
         final skillValue = character.skills[skill.name] ?? skill.baseHalf;
+        final growth = manager.character.skillGrowth[skill.name];
+        final hasStats = growth != null &&
+            (growth.successCount > 0 ||
+                growth.failureCount > 0 ||
+                growth.growthMarked);
 
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
             title: Text(skill.name),
-            subtitle: Text(_getCategoryName(skill.category)),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(_getCategoryName(skill.category)),
+                if (hasStats) _buildGrowthLine(growth, context),
+              ],
+            ),
+            isThreeLine: hasStats,
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -257,6 +271,84 @@ class _SkillPageState extends State<SkillPage>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildGrowthLine(SkillGrowthState growth, BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final successColor = scheme.tertiary;
+    final failureColor = scheme.error;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          _statChip(
+            icon: Icons.check_circle_outline,
+            label: '成功 ${growth.successCount}',
+            color: successColor,
+          ),
+          _statChip(
+            icon: Icons.cancel_outlined,
+            label: '失败 ${growth.failureCount}',
+            color: failureColor,
+          ),
+          if (growth.growthMarked)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: scheme.primary,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.auto_awesome, size: 12, color: Colors.white),
+                  SizedBox(width: 2),
+                  Text(
+                    '成长待检',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 2),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
