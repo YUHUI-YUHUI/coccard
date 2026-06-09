@@ -14,6 +14,7 @@ import 'app/pages/reference_page.dart';
 import 'app/pages/ai_character_page.dart';
 import 'app/pages/rulebook_reader_page.dart';
 import 'app/setting/check_rule_controller.dart';
+import 'app/setting/dice_history_controller.dart';
 import 'app/setting/theme_controller.dart';
 import 'app/theme/app_theme.dart';
 
@@ -23,6 +24,7 @@ void main() async {
   final characterManager = CharacterManager(prefs: prefs);
   final themeController = ThemeController(prefs: prefs);
   final checkRuleController = CheckRuleController(prefs: prefs);
+  final diceHistoryController = DiceHistoryController(prefs: prefs);
 
   runApp(
     MultiProvider(
@@ -30,6 +32,7 @@ void main() async {
         ChangeNotifierProvider.value(value: characterManager),
         ChangeNotifierProvider.value(value: themeController),
         ChangeNotifierProvider.value(value: checkRuleController),
+        ChangeNotifierProvider.value(value: diceHistoryController),
       ],
       child: const COCCharacterApp(),
     ),
