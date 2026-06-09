@@ -4,6 +4,7 @@
 - P1#1 临时疯狂弹窗同时显示症状和持续轮数（d7d2759）
 - P1#2 长期症状弹窗同时显示症状和持续小时数（d7d2759）
 - P1#3 技能页展示成功/失败次数和成长待检标记（798abec）
+- P1#4 本地骰点历史 + 不使用联机措辞（f67e25d）
 
 ## 任务清单（来自 docs/feedback-development-spec.md 第 5 节）
 ### P0（已完成 - 见 commit 9acd337 和 c42fa93）
@@ -13,11 +14,11 @@
 - [x] 在 `Character` 中增加技能检定记录和成长状态字段（9acd337）
 - [x] 技能页一键检定写入成功/失败统计和成长标记（9acd337）
 
-### P1（待完成）
+### P1（已完成）
 - [x] 临时疯狂弹窗同时显示症状和持续轮数（d7d2759）
 - [x] 长期症状弹窗同时显示症状和持续小时数（d7d2759）
 - [x] 技能页展示成功/失败次数和成长待检标记（798abec）
-- [ ] 增加本地骰点历史，不使用联机措辞
+- [x] 增加本地骰点历史，不使用联机措辞（f67e25d）
 
 ### P2（待完成）
 - [ ] 幕间成长批量处理页面
@@ -27,4 +28,4 @@
 
 ## 执行日志
 2026-06-08 17:15 | P1#3 技能页展示成功/失败次数和成长待检标记 | lib/app/pages/skill_page.dart, test/skill_growth_state_test.dart | 798abec
-
+2026-06-09 21:00 | P1#4 本地骰点历史 | lib/app/data/dice_roll_record.dart, lib/app/setting/dice_history_controller.dart, lib/app/widgets/dice_roller.dart, lib/main.dart, test/dice_history_controller_test.dart | f67e25d
