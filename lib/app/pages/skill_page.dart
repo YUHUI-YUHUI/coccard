@@ -46,6 +46,51 @@ class _SkillPageState extends State<SkillPage>
     return Scaffold(
       appBar: AppBar(
         title: const Text('技能'),
+        actions: [
+          Consumer<CharacterManager>(
+            builder: (context, manager, _) {
+              final markedCount = manager
+                  .markedGrowthSkills()
+                  .length;
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.auto_awesome),
+                    tooltip: markedCount > 0
+                        ? '幕间成长（$markedCount 项待检）'
+                        : '幕间成长',
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/skill_growth'),
+                  ),
+                  if (markedCount > 0)
+                    Positioned(
+                      right: 6,
+                      top: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.error,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '$markedCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,

@@ -9,6 +9,7 @@ import 'app/pages/character_creation_page.dart';
 import 'app/pages/settings_page.dart';
 import 'app/pages/about_page.dart';
 import 'app/pages/skill_page.dart';
+import 'app/pages/skill_growth_page.dart';
 import 'app/pages/weapon_page.dart';
 import 'app/pages/reference_page.dart';
 import 'app/pages/ai_character_page.dart';
@@ -60,6 +61,7 @@ class COCCharacterApp extends StatelessWidget {
             '/settings': (context) => const SettingsPage(),
             '/about': (context) => const AboutPage(),
             '/skills': (context) => const SkillPage(),
+            '/skill_growth': (context) => const SkillGrowthPage(),
             '/weapons': (context) => const WeaponPage(),
             '/reference': (context) => const ReferencePage(),
             '/ai_character': (context) => const AiCharacterPage(),

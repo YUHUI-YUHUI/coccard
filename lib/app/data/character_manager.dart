@@ -619,6 +619,80 @@ class CharacterManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 列出所有 growthMarked 为 true 的技能（用于幕间成长页）。
+  List<({String skillName, SkillGrowthState state})> markedGrowthSkills() {
+    if (_characters.isEmpty) return const [];
+    final c = character;
+    final entries = c.skillGrowth.entries
+        .where((e) => e.value.growthMarked)
+        .map((e) => (skillName: e.key, state: e.value))
+        .toList();
+    entries.sort((a, b) => a.skillName.compareTo(b.skillName));
+    return entries;
+  }
+
+  /// 对单个技能执行一次幕间成长检定。
+  ///
+  /// 行为：
+  /// 1. 掷 1D100，结果必须大于当前技能值才成长。
+  /// 2. 成长成功后 +1D10，清除 growthMarked，写入 lastGrowthAt。
+  /// 3. 不成长时保留标记，允许下次幕间再检。
+  /// 4. 同步追加一条 skillCheckRecord 记录以保留可追溯日志。
+  ///
+  /// 返回 [SkillGrowthCheck] 结果便于 UI 展示。
+  SkillGrowthCheck performGrowthCheck(String skillName) {
+    if (_characters.isEmpty) {
+      throw StateError('当前没有角色，无法进行成长检定');
+    }
+    final c = character;
+    final state = c.skillGrowth[skillName];
+    if (state == null || !state.growthMarked) {
+      throw StateError('技能 "$skillName" 未标记成长，无需检定');
+    }
+    final skillValue = c.skills[skillName] ?? 0;
+    final random = Random();
+    final roll = random.nextInt(100) + 1;
+    final dieRoll = random.nextInt(10) + 1;
+    final result = SkillGrowthCheck.evaluate(
+      skillName: skillName,
+      skillValue: skillValue,
+      roll: roll,
+      dieRoll: dieRoll,
+    );
+    final now = result.checkedAt;
+    if (result.grown) {
+      c.skills[skillName] = result.newSkillValue;
+      state.growthMarked = false;
+      state.lastGrowthAt = now;
+      c.skillGrowth[skillName] = state;
+    }
+    state.lastCheckedAt = now;
+    // 追加成长检定日志（level 用 extreme 以便高亮）
+    c.skillCheckRecords.add(
+      SkillCheckRecord(
+        id: 'growth_${now.microsecondsSinceEpoch}',
+        skillName: skillName,
+        skillValue: skillValue,
+        roll: roll,
+        level: result.grown
+            ? SkillCheckLevel.critical
+            : SkillCheckLevel.failure,
+        finalSuccess: result.grown,
+        ruleProfileId: 'growth',
+        createdAt: now,
+      ),
+    );
+    if (c.skillCheckRecords.length > _maxSkillCheckRecords) {
+      c.skillCheckRecords.removeRange(
+        0,
+        c.skillCheckRecords.length - _maxSkillCheckRecords,
+      );
+    }
+    _saveCharacters();
+    notifyListeners();
+    return result;
+  }
+
   /// 玩家花费幸运补正后，将最近一次检定记录改写为成功，并补登成长标记。
   void markLastCheckLuckSpent({
     required String skillName,

@@ -99,3 +99,56 @@ class SkillGrowthState {
     );
   }
 }
+
+/// 幕间技能成长检定结果。
+///
+/// COC7 规则：成功检定过的技能在幕间掷 1D100，结果大于当前技能值即成长 +1D10。
+class SkillGrowthCheck {
+  final String skillName;
+  final int skillValue;
+  final int roll;
+
+  /// 实际增加的技能值（0 表示未成长）。
+  final int increase;
+
+  /// 成长后的技能值（= skillValue + increase）。
+  final int newSkillValue;
+  final DateTime checkedAt;
+
+  const SkillGrowthCheck({
+    required this.skillName,
+    required this.skillValue,
+    required this.roll,
+    required this.increase,
+    required this.newSkillValue,
+    required this.checkedAt,
+  });
+
+  bool get grown => increase > 0;
+
+  /// 纯函数：掷 1D100 决定是否成长。
+  ///
+  /// - [roll] 必须在 1..100 范围内（调用方负责边界）。
+  /// - 成长条件：roll > skillValue 且 roll <= 100。
+  /// - 成功时 increase = 1D10（由 [dieRoll] 注入，便于测试）。
+  static SkillGrowthCheck evaluate({
+    required String skillName,
+    required int skillValue,
+    required int roll,
+    required int dieRoll,
+    DateTime? checkedAt,
+  }) {
+    assert(roll >= 1 && roll <= 100, 'roll must be in 1..100');
+    assert(dieRoll >= 1 && dieRoll <= 10, 'dieRoll must be in 1..10');
+    final grown = roll > skillValue;
+    final increase = grown ? dieRoll : 0;
+    return SkillGrowthCheck(
+      skillName: skillName,
+      skillValue: skillValue,
+      roll: roll,
+      increase: increase,
+      newSkillValue: skillValue + increase,
+      checkedAt: checkedAt ?? DateTime.now(),
+    );
+  }
+}

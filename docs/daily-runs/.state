@@ -5,6 +5,7 @@
 - P1#2 长期症状弹窗同时显示症状和持续小时数（d7d2759）
 - P1#3 技能页展示成功/失败次数和成长待检标记（798abec）
 - P1#4 本地骰点历史 + 不使用联机措辞（f67e25d）
+- P2#1 幕间成长批量处理页面（含 SkillGrowthCheck / 1D100 检定 / 全部检定入口）（见本次 commit）
 
 ## 任务清单（来自 docs/feedback-development-spec.md 第 5 节）
 ### P0（已完成 - 见 commit 9acd337 和 c42fa93）
@@ -20,8 +21,8 @@
 - [x] 技能页展示成功/失败次数和成长待检标记（798abec）
 - [x] 增加本地骰点历史，不使用联机措辞（f67e25d）
 
-### P2（待完成）
-- [ ] 幕间成长批量处理页面
+### P2（部分已完成）
+- [x] 幕间成长批量处理页面（本次 commit）
 - [ ] SAN 损失表达式解析和临时疯狂自动触发流程
 - [ ] 检定日志筛选、清理、导出
 - [ ] 联机骰点房间设计
@@ -29,3 +30,4 @@
 ## 执行日志
 2026-06-08 17:15 | P1#3 技能页展示成功/失败次数和成长待检标记 | lib/app/pages/skill_page.dart, test/skill_growth_state_test.dart | 798abec
 2026-06-09 21:00 | P1#4 本地骰点历史 | lib/app/data/dice_roll_record.dart, lib/app/setting/dice_history_controller.dart, lib/app/widgets/dice_roller.dart, lib/main.dart, test/dice_history_controller_test.dart | f67e25d
+2026-06-10 22:20 | P2#1 幕间成长批量处理页面 | lib/app/data/skill_check_record.dart, lib/app/data/character_manager.dart, lib/app/pages/skill_growth_page.dart, lib/app/pages/skill_page.dart, lib/main.dart, test/skill_growth_check_test.dart | 见本次 commit
