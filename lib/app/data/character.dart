@@ -1,3 +1,5 @@
+import 'insanity_episode.dart';
+import 'sanity_loss_record.dart';
 import 'skill_check_record.dart';
 
 class CharacterItem {
@@ -62,6 +64,12 @@ class Character {
   List<SkillCheckRecord> skillCheckRecords;
   Map<String, SkillGrowthState> skillGrowth;
 
+  /// SAN 损失日志（最近 [_maxSanityLossRecords] 条）。
+  List<SanityLossRecord> sanityLossRecords;
+
+  /// 临时/长期疯狂发作记录。
+  List<InsanityEpisode> insanityEpisodes;
+
   Character({
     this.id = 0,
     this.name = '',
@@ -110,11 +118,15 @@ class Character {
     this.luckDice = 3,
     List<SkillCheckRecord>? skillCheckRecords,
     Map<String, SkillGrowthState>? skillGrowth,
+    List<SanityLossRecord>? sanityLossRecords,
+    List<InsanityEpisode>? insanityEpisodes,
   })  : weapons = weapons ?? [],
         items = items ?? [],
         skills = skills ?? {},
         skillCheckRecords = skillCheckRecords ?? [],
-        skillGrowth = skillGrowth ?? {};
+        skillGrowth = skillGrowth ?? {},
+        sanityLossRecords = sanityLossRecords ?? [],
+        insanityEpisodes = insanityEpisodes ?? [];
 
   Map<String, dynamic> toJson() {
     return {
@@ -165,6 +177,8 @@ class Character {
       'luckDice': luckDice,
       'skillCheckRecords': skillCheckRecords.map((r) => r.toJson()).toList(),
       'skillGrowth': skillGrowth.map((k, v) => MapEntry(k, v.toJson())),
+      'sanityLossRecords': sanityLossRecords.map((r) => r.toJson()).toList(),
+      'insanityEpisodes': insanityEpisodes.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -236,6 +250,16 @@ class Character {
             ),
           ) ??
           {},
+      sanityLossRecords: (json['sanityLossRecords'] as List<dynamic>?)
+              ?.map((r) =>
+                  SanityLossRecord.fromJson(Map<String, dynamic>.from(r as Map)))
+              .toList() ??
+          [],
+      insanityEpisodes: (json['insanityEpisodes'] as List<dynamic>?)
+              ?.map((e) =>
+                  InsanityEpisode.fromJson(Map<String, dynamic>.from(e as Map)))
+              .toList() ??
+          [],
     );
   }
 }

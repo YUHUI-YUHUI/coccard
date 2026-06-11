@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data/character_manager.dart';
 import '../data/character.dart';
+import '../data/insanity_episode.dart';
+import '../data/sanity_loss_record.dart';
 import '../widgets/attribute_widget.dart';
 import '../widgets/derived_stats_widget.dart';
 import '../widgets/dice_roller.dart';
@@ -109,6 +111,8 @@ class _HomePageState extends State<HomePage> {
                 _buildAttributeCard(context, character, manager),
                 const SizedBox(height: 16),
                 _buildDerivedStatsCard(context, manager.character, manager),
+                const SizedBox(height: 16),
+                _buildSanityCard(context, manager.character, manager),
                 const SizedBox(height: 16),
                 _buildWeaponsCard(context, character),
                 const SizedBox(height: 16),
@@ -308,6 +312,355 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSanityCard(BuildContext context, Character character, CharacterManager manager) {
+    final episodes = character.insanityEpisodes.reversed.take(3).toList();
+    final losses = character.sanityLossRecords.reversed.take(3).toList();
+    return Card(
+      color: Colors.purple.withOpacity(0.05),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.psychology, color: Colors.purple),
+                SizedBox(width: 8),
+                Text('理智事件', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const Divider(),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showSanityLossDialog(context, manager),
+                    icon: const Icon(Icons.healing),
+                    label: const Text('应用 SAN 损失'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showInsanityHistoryDialog(context, character),
+                    icon: const Icon(Icons.history),
+                    label: const Text('查看历史'),
+                  ),
+                ),
+              ],
+            ),
+            if (losses.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Text('最近 SAN 损失', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              ...losses.map((r) => _sanityLossTile(r)),
+            ],
+            if (episodes.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Text('最近疯狂发作', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple)),
+              const SizedBox(height: 4),
+              ...episodes.map((e) => _episodeTile(e)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sanityLossTile(SanityLossRecord r) {
+    final ts = '${r.createdAt.month.toString().padLeft(2, '0')}-${r.createdAt.day.toString().padLeft(2, '0')} '
+        '${r.createdAt.hour.toString().padLeft(2, '0')}:${r.createdAt.minute.toString().padLeft(2, '0')}';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          const Icon(Icons.arrow_downward, size: 14, color: Colors.red),
+          const SizedBox(width: 4),
+          Text('-$r.amount', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${r.expression} → ${r.rollDetail}',
+              style: const TextStyle(fontSize: 12),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Text(ts, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        ],
+      ),
+    );
+  }
+
+  Widget _episodeTile(InsanityEpisode e) {
+    final ts = '${e.createdAt.month.toString().padLeft(2, '0')}-${e.createdAt.day.toString().padLeft(2, '0')} '
+        '${e.createdAt.hour.toString().padLeft(2, '0')}:${e.createdAt.minute.toString().padLeft(2, '0')}';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.bolt, size: 14, color: Colors.purple),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              '#${e.symptomRoll} · ${e.durationRoll}${e.durationUnit} · ${e.symptomText}',
+              style: const TextStyle(fontSize: 12),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Text(ts, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        ],
+      ),
+    );
+  }
+
+  void _showSanityLossDialog(BuildContext context, CharacterManager manager) {
+    final ctrl = TextEditingController(text: '1d6');
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.healing, color: Colors.red),
+              SizedBox(width: 8),
+              Text('应用 SAN 损失'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('请输入损失表达式（COC 规则）：'),
+              const SizedBox(height: 8),
+              const Text('1d6 / 2d6 / 1d6+1 / 1d10 / 5', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: ctrl,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'SAN 损失表达式',
+                  hintText: '1d6',
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '当前 SAN：${manager.character.sanity}/${manager.character.maxSanity} · INT ${manager.character.int_}',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                '注：单次损失 ≥ 5 时自动进行 INT 检定；成功则陷入临时疯狂。',
+                style: TextStyle(fontSize: 11, color: Colors.deepPurple),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            ElevatedButton.icon(
+              onPressed: () {
+                final expr = ctrl.text.trim();
+                if (expr.isEmpty) {
+                  Navigator.pop(ctx);
+                  return;
+                }
+                Navigator.pop(ctx);
+                _applySanityLoss(context, manager, expr);
+              },
+              icon: const Icon(Icons.psychology),
+              label: const Text('应用'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _applySanityLoss(BuildContext context, CharacterManager manager, String expression) {
+    final outcome = manager.applySanityLoss(expression);
+    if (!outcome.isValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('SAN 表达式无法解析：$expression')),
+      );
+      return;
+    }
+
+    // 主结果行
+    final lossText = '本次损失 ${outcome.loss} 点 SAN';
+    String detailText = outcome.rollDetail;
+
+    if (outcome.ranIntCheck) {
+      final ic = outcome.intCheck!;
+      detailText += '\nINT 检定：投出 ${ic.roll} / 目标 ${ic.target}';
+      detailText += ic.success ? '（成功）' : '（失败，大脑屏蔽）';
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                outcome.triggeredInsanity ? Icons.warning_amber : Icons.psychology,
+                color: outcome.triggeredInsanity ? Colors.red : Colors.purple,
+              ),
+              const SizedBox(width: 8),
+              Text(outcome.triggeredInsanity ? '疯狂发作' : 'SAN 损失已应用'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(lossText, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text('SAN：${outcome.sanityBefore} → ${outcome.sanityAfter}', style: const TextStyle(color: Colors.red)),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(detailText, style: const TextStyle(fontSize: 13)),
+                ),
+                if (outcome.episode != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '即时症状 #${outcome.episode!.symptomRoll} · 持续 ${outcome.episode!.durationRoll} ${outcome.episode!.durationUnit}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(outcome.episode!.symptomText),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('关闭')),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showInsanityHistoryDialog(BuildContext context, Character character) {
+    final losses = character.sanityLossRecords.reversed.toList();
+    final episodes = character.insanityEpisodes.reversed.toList();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.history, color: Colors.purple),
+            SizedBox(width: 8),
+            Text('理智事件历史'),
+          ],
+        ),
+        content: SizedBox(
+          width: 400,
+          child: DefaultTabController(
+            length: 2,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const TabBar(
+                  labelColor: Colors.purple,
+                  unselectedLabelColor: Colors.grey,
+                  tabs: [
+                    Tab(text: 'SAN 损失'),
+                    Tab(text: '疯狂发作'),
+                  ],
+                ),
+                SizedBox(
+                  height: 320,
+                  child: TabBarView(
+                    children: [
+                      _buildLossHistoryList(losses),
+                      _buildEpisodeHistoryList(episodes),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('关闭')),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLossHistoryList(List<SanityLossRecord> losses) {
+    if (losses.isEmpty) {
+      return const Center(child: Text('暂无记录', style: TextStyle(color: Colors.grey)));
+    }
+    return ListView.builder(
+      itemCount: losses.length,
+      itemBuilder: (ctx, i) {
+        final r = losses[i];
+        return ListTile(
+          dense: true,
+          leading: const Icon(Icons.arrow_downward, color: Colors.red),
+          title: Text('-$r.amount · ${r.expression}'),
+          subtitle: Text(r.rollDetail),
+          trailing: Text(
+            '${r.createdAt.month.toString().padLeft(2, '0')}-${r.createdAt.day.toString().padLeft(2, '0')} '
+            '${r.createdAt.hour.toString().padLeft(2, '0')}:${r.createdAt.minute.toString().padLeft(2, '0')}',
+            style: const TextStyle(fontSize: 11, color: Colors.grey),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEpisodeHistoryList(List<InsanityEpisode> episodes) {
+    if (episodes.isEmpty) {
+      return const Center(child: Text('暂无疯狂发作记录', style: TextStyle(color: Colors.grey)));
+    }
+    return ListView.builder(
+      itemCount: episodes.length,
+      itemBuilder: (ctx, i) {
+        final e = episodes[i];
+        return ListTile(
+          dense: true,
+          leading: Icon(
+            e.triggeredInsanity ? Icons.bolt : Icons.shield,
+            color: e.triggeredInsanity ? Colors.red : Colors.grey,
+          ),
+          title: Text('#${e.symptomRoll} · ${e.durationRoll}${e.durationUnit}'),
+          subtitle: Text(
+            e.symptomText,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: Text(
+            '${e.createdAt.month.toString().padLeft(2, '0')}-${e.createdAt.day.toString().padLeft(2, '0')} '
+            '${e.createdAt.hour.toString().padLeft(2, '0')}:${e.createdAt.minute.toString().padLeft(2, '0')}',
+            style: const TextStyle(fontSize: 11, color: Colors.grey),
+          ),
+        );
+      },
     );
   }
 

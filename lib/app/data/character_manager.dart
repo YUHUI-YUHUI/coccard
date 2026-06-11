@@ -6,6 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'character.dart';
 import 'check_rule.dart';
+import 'insanity_service.dart';
+import 'sanity_loss_record.dart';
 import 'skill.dart';
 import 'skill_check_record.dart';
 import 'coc_data.dart';
@@ -578,6 +580,7 @@ class CharacterManager extends ChangeNotifier {
   }
 
   static const int _maxSkillCheckRecords = 200;
+  static const int _maxSanityLossRecords = 200;
 
   /// 记录一次技能检定，更新成长统计；超出 [_maxSkillCheckRecords] 时裁掉最旧的日志。
   /// 聚合统计 (skillGrowth) 不随裁剪而丢失。
@@ -736,6 +739,64 @@ class CharacterManager extends ChangeNotifier {
     character.sanity = (character.sanity - amount).clamp(0, character.maxSanity);
     _saveCharacters();
     notifyListeners();
+  }
+
+  /// 应用一次 SAN 损失：解析表达式 → 投骰 → 扣减 SAN → 必要时 INT 检定 →
+  /// 触发临时疯狂 → 写日志与疯狂记录 → 落盘。
+  ///
+  /// 返回值包含完整流程结果，供 UI 弹窗展示。
+  /// 当 [rng] 为 null 时使用 [Random] 默认实例（每次重置种子，结果不可预测）。
+  ApplySanityLossOutcome applySanityLoss(
+    String expression, {
+    Random? rng,
+    InsanityService? service,
+  }) {
+    if (_characters.isEmpty) {
+      return ApplySanityLossOutcome.invalidExpression(expression);
+    }
+    final c = character;
+    final r = rng ?? Random();
+    final svc = service ?? const InsanityService();
+
+    final outcome = svc.apply(
+      expression: expression,
+      currentSanity: c.sanity,
+      maxSanity: c.maxSanity,
+      intValue: c.int_,
+      rng: r,
+    );
+
+    if (!outcome.isValid) {
+      return outcome;
+    }
+
+    c.sanity = outcome.sanityAfter;
+    final now = DateTime.now();
+    final recordId = 'sl_${now.microsecondsSinceEpoch}';
+    c.sanityLossRecords.add(
+      SanityLossRecord(
+        id: recordId,
+        expression: expression,
+        rollDetail: outcome.rollDetail,
+        amount: outcome.loss,
+        sanityBefore: outcome.sanityBefore,
+        sanityAfter: outcome.sanityAfter,
+        intCheckTriggered: outcome.ranIntCheck,
+        createdAt: now,
+      ),
+    );
+    if (c.sanityLossRecords.length > _maxSanityLossRecords) {
+      c.sanityLossRecords.removeRange(
+        0,
+        c.sanityLossRecords.length - _maxSanityLossRecords,
+      );
+    }
+    if (outcome.episode != null) {
+      c.insanityEpisodes.add(outcome.episode!);
+    }
+    _saveCharacters();
+    notifyListeners();
+    return outcome;
   }
 
   void takeDamage(int amount) {
