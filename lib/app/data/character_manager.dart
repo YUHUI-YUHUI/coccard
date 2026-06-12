@@ -287,14 +287,17 @@ class CharacterManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 重算派生属性，并把当前 HP/MP/SAN 重置到起始值（创建/重投语义）。
+  /// 游玩中修正属性请走 [updateAttribute]，它会在重算后恢复当前消耗。
   void _calculateDerivedStats() {
     final c = character;
     c.maxHp = ((c.siz + c.con) / 10).floor();
     c.currentHp = c.maxHp;
     c.maxMp = (c.pow / 5).floor();
     c.currentMp = c.maxMp;
-    c.maxSanity = 99 - c.pow;
-    c.sanity = c.maxSanity;
+    // COC7：起始 SAN = POW，上限 = 99 - 克苏鲁神话
+    _refreshSanityCap();
+    c.sanity = c.pow.clamp(0, c.maxSanity);
     // 仅在 luck 未初始化（=0）时自动投出，避免覆盖调用方已设置的值。
     if (c.luck == 0) {
       c.luck = ((Random().nextInt(6) + 1) + (Random().nextInt(6) + 1) + (Random().nextInt(6) + 1)) * 5;
@@ -324,6 +327,14 @@ class CharacterManager extends ChangeNotifier {
 
     // 属性变化时重新计算职业点数和兴趣点数
     _recalculateOccupationPoints();
+  }
+
+  /// COC7：SAN 上限 = 99 - 克苏鲁神话技能值。技能变动后调用，
+  /// 当前 SAN 超出新上限时一并压回。
+  void _refreshSanityCap() {
+    final c = character;
+    c.maxSanity = (99 - (c.skills['克苏鲁神话'] ?? 0)).clamp(0, 99);
+    if (c.sanity > c.maxSanity) c.sanity = c.maxSanity;
   }
 
   void _recalculateOccupationPoints() {
@@ -512,6 +523,7 @@ class CharacterManager extends ChangeNotifier {
 
   void updateSkill(String skillName, int value) {
     character.skills[skillName] = value;
+    _refreshSanityCap();
     _saveCharacters();
     notifyListeners();
   }
@@ -540,6 +552,7 @@ class CharacterManager extends ChangeNotifier {
     final baseValue = skillDef?.baseHalf ?? 0;
     final currentValue = c.skills[skillName] ?? baseValue;
     c.skills[skillName] = currentValue + amount;
+    _refreshSanityCap();
     _saveCharacters();
     notifyListeners();
     return true;
@@ -665,6 +678,7 @@ class CharacterManager extends ChangeNotifier {
     final now = result.checkedAt;
     if (result.grown) {
       c.skills[skillName] = result.newSkillValue;
+      _refreshSanityCap();
       state.growthMarked = false;
       state.lastGrowthAt = now;
       c.skillGrowth[skillName] = state;
