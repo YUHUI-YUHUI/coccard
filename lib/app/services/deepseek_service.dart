@@ -208,28 +208,33 @@ class AiService {
 
   Future<String> _callApi(String systemPrompt, String userPrompt) async {
     final client = _client ?? http.Client();
-    final resp = await client.post(
-      Uri.parse(provider.url),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $apiKey',
-      },
-      body: jsonEncode({
-        'model': provider.model,
-        'temperature': 0.7,
-        'messages': [
-          {'role': 'system', 'content': systemPrompt},
-          {'role': 'user', 'content': userPrompt},
-        ],
-      }),
-    ).timeout(const Duration(seconds: 60));
+    try {
+      final resp = await client.post(
+        Uri.parse(provider.url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $apiKey',
+        },
+        body: jsonEncode({
+          'model': provider.model,
+          'temperature': 0.7,
+          'messages': [
+            {'role': 'system', 'content': systemPrompt},
+            {'role': 'user', 'content': userPrompt},
+          ],
+        }),
+      ).timeout(const Duration(seconds: 60));
 
-    if (resp.statusCode != 200) {
-      throw Exception('API 请求失败 (${resp.statusCode}): ${resp.body}');
+      if (resp.statusCode != 200) {
+        throw Exception('API 请求失败 (${resp.statusCode}): ${resp.body}');
+      }
+
+      final data = jsonDecode(resp.body);
+      return data['choices'][0]['message']['content'] as String;
+    } finally {
+      // 注入的 client 由调用方管理，只关闭本方法临时创建的
+      if (_client == null) client.close();
     }
-
-    final data = jsonDecode(resp.body);
-    return data['choices'][0]['message']['content'] as String;
   }
 
   String _extractJson(String response) {
