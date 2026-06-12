@@ -5,7 +5,9 @@
 - P1#2 长期症状弹窗同时显示症状和持续小时数（d7d2759）
 - P1#3 技能页展示成功/失败次数和成长待检标记（798abec）
 - P1#4 本地骰点历史 + 不使用联机措辞（f67e25d）
-- P2#1 幕间成长批量处理页面（含 SkillGrowthCheck / 1D100 检定 / 全部检定入口）（见本次 commit）
+- P2#1 幕间成长批量处理页面（含 SkillGrowthCheck / 1D100 检定 / 全部检定入口）（caaf55d）
+- P2#2 SAN 损失表达式解析 + 临时疯狂自动触发流程（f533137）
+- 2026-06-12 P2#3 提案文档 + spec 第 10 节索引（见本次 commit hash）
 
 ## 任务清单（来自 docs/feedback-development-spec.md 第 5 节）
 ### P0（已完成 - 见 commit 9acd337 和 c42fa93）
@@ -22,12 +24,14 @@
 - [x] 增加本地骰点历史，不使用联机措辞（f67e25d）
 
 ### P2（部分已完成）
-- [x] 幕间成长批量处理页面（本次 commit）
-- [ ] SAN 损失表达式解析和临时疯狂自动触发流程
+- [x] 幕间成长批量处理页面（caaf55d）
+- [x] SAN 损失表达式解析和临时疯狂自动触发流程（f533137）
 - [ ] 检定日志筛选、清理、导出
 - [ ] 联机骰点房间设计
 
 ## 执行日志
 2026-06-08 17:15 | P1#3 技能页展示成功/失败次数和成长待检标记 | lib/app/pages/skill_page.dart, test/skill_growth_state_test.dart | 798abec
 2026-06-09 21:00 | P1#4 本地骰点历史 | lib/app/data/dice_roll_record.dart, lib/app/setting/dice_history_controller.dart, lib/app/widgets/dice_roller.dart, lib/main.dart, test/dice_history_controller_test.dart | f67e25d
-2026-06-10 22:20 | P2#1 幕间成长批量处理页面 | lib/app/data/skill_check_record.dart, lib/app/data/character_manager.dart, lib/app/pages/skill_growth_page.dart, lib/app/pages/skill_page.dart, lib/main.dart, test/skill_growth_check_test.dart | 见本次 commit
+2026-06-10 22:20 | P2#1 幕间成长批量处理页面 | lib/app/data/skill_check_record.dart, lib/app/data/character_manager.dart, lib/app/pages/skill_growth_page.dart, lib/app/pages/skill_page.dart, lib/main.dart, test/skill_growth_check_test.dart | caaf55d
+2026-06-11 11:30 | P2#2 SAN 损失表达式解析 + 临时疯狂自动触发 | lib/app/data/insanity_episode.dart, lib/app/data/sanity_loss_record.dart, lib/app/data/sanity_expression.dart, lib/app/data/insanity_service.dart, lib/app/data/character.dart, lib/app/data/character_manager.dart, lib/app/pages/home_page.dart, test/insanity_service_test.dart, test/sanity_expression_test.dart, test/sanity_loss_flow_test.dart | f533137
+2026-06-12 23:00 | P2#3 提案文档 + spec 第 10 节索引（Claude CLI 未登录，跳过代码实现，直接产出可机械执行的开发文档） | docs/feature-proposals/2026-06-12-技能检定日志筛选清理导出.md, docs/feedback-development-spec.md, docs/daily-runs/.state | 见本次 commit

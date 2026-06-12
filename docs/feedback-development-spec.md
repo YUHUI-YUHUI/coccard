@@ -421,3 +421,21 @@ Widget 测试：
 - 技能检定自动记录成功失败次数。
 - 成功技能自动出现成长标记。
 - 旧角色数据兼容。
+
+## 10. 后续功能提案
+
+当 5 节任务清单全部完成后，由每日 cron 自动分析代码结构并产出可落地的开发文档。每份提案落到 `docs/feature-proposals/YYYY-MM-DD-功能简述.md`，并在此节维护索引。
+
+### 10.1 技能检定日志筛选、清理、导出（P2#3 细化）
+
+- **提出日期**：2026-06-12
+- **对应任务**：P2#3「检定日志筛选、清理、导出」
+- **完整文档**：`docs/feature-proposals/2026-06-12-技能检定日志筛选清理导出.md`
+- **范围**：技能检定日志（`SkillCheckRecord`）的筛选 / 清理 / 导出 CSV / 导出 JSON；不影响本地骰点历史（`DiceRollRecord`）。
+- **核心数据**：`SkillCheckLogFilter`（UI 层临时状态，不持久化）、CSV 列固定 9 字段、JSON 顶层带 `schema: coccard.skill_check_log.v1`。
+- **核心控制器**：`SkillCheckLogController`（`ChangeNotifier`），复用 `CharacterManager` 写入路径，不新增 SharedPreferences key。
+- **UI 入口**：`SkillPage` AppBar 新增 `Icons.history` 按钮，跳转 `/skill_check_log`；页面内含筛选条 + 三 action（筛选 / 清理 / 导出）。
+- **任务拆分**：6 步，每步独立 commit；顺序为 controller → page → SkillPage 入口 → main 路由 → 2 个测试文件。
+- **测试矩阵**：10 条 controller 单元测试 + 3 条 widget 测试；不依赖 `intl` 包；CSV 使用 `\uFEFF` BOM 兼容 Excel。
+- **兼容性**：不修改 `Character` / `SkillCheckRecord` / `SkillGrowthState` 数据结构；旧 JSON 已由 P0#4 处理默认值。
+- **风险**：CSV 转义按 RFC 4180；清理确认弹窗前置导出菜单，避免误删无法回滚。
