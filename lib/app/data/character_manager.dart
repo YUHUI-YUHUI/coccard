@@ -248,6 +248,12 @@ class CharacterManager extends ChangeNotifier {
 
   void updateAttribute(String attr, int value) {
     final c = character;
+    // 游玩中修正单项属性时保留当前消耗：HP/MP 记录与上限的差额，
+    // SAN 记录与起始值（=POW）的偏移，重算派生后按差额恢复，
+    // 避免改一次属性就把受伤/掉 SAN 的状态重置回满。
+    final hpLost = (c.maxHp - c.currentHp).clamp(0, 1 << 30);
+    final mpLost = (c.maxMp - c.currentMp).clamp(0, 1 << 30);
+    final sanityOffset = c.pow - c.sanity;
     switch (attr) {
       case '力量': c.str = value; break;
       case '体质': c.con = value; break;
@@ -259,6 +265,9 @@ class CharacterManager extends ChangeNotifier {
       case '教育': c.edu = value; break;
     }
     _calculateDerivedStats();
+    c.currentHp = (c.maxHp - hpLost).clamp(0, c.maxHp);
+    c.currentMp = (c.maxMp - mpLost).clamp(0, c.maxMp);
+    c.sanity = (c.pow - sanityOffset).clamp(0, c.maxSanity);
     _saveCharacters();
     notifyListeners();
   }
