@@ -71,6 +71,13 @@ void main() {
       expect(r.detail, '5');
     });
 
+    test('表达式 "0"（0/1d4 的成功面）可投掷且返回 0', () {
+      final e = SanityExpression.parse('0')!;
+      final r = e.roll(_StubRandom(0));
+      expect(r.total, 0);
+      expect(r.detail, '0');
+    });
+
     test('1d6 投出 [3]', () {
       final e = SanityExpression.parse('1d6')!;
       final r = e.roll(_StubRandom(2)); // nextInt(6) -> 2 → +1 = 3

@@ -62,12 +62,14 @@ class SanityExpression {
     );
   }
 
-  /// 在解析成功后投掷；解析失败抛 [ArgumentError]。
+  /// 在 [parse] 成功后投掷。
   ///
   /// 返回 `RollResult` 包含骰面明细字符串与最终值。
   RollResult roll(Random rng) {
-    assert(count > 0 || modifier > 0,
-        'SanityExpression.roll 只能用于已解析的表达式');
+    // parse 保证：纯数字时 count == 0 且 modifier >= 0（"0" 合法，
+    // 对应 0/1d4 这类表达式的成功面）；骰子表达式时 count >= 1。
+    assert(count > 0 || modifier >= 0,
+        'SanityExpression.roll 只能用于 parse 成功的表达式');
     if (count == 0) {
       // 纯数字表达式，没有骰子要投
       return RollResult(
