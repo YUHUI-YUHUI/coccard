@@ -15,13 +15,8 @@ class InsanityService {
   /// 单次 SAN 损失多少以上需要 INT 检定。COC7 默认 5。
   final int intCheckThreshold;
 
-  /// 是否在 INT 检定失败时也记录 [InsanityEpisode]（默认 false，只记录
-  /// 真正触发的疯狂）。在调试或某些桌规下可开启。
-  final bool recordShieldedEpisode;
-
   const InsanityService({
     this.intCheckThreshold = 5,
-    this.recordShieldedEpisode = false,
   });
 
   /// 决定本次 SAN 损失是否需要进入 INT 检定流程。
@@ -110,8 +105,6 @@ class InsanityService {
           rng: rng,
           createdAt: now,
         );
-      } else if (recordShieldedEpisode) {
-        episode = null;
       }
     }
 
