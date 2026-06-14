@@ -70,6 +70,13 @@ class CharacterManager extends ChangeNotifier {
     await _prefs.setInt(_currentIndexKey, _currentIndex);
   }
 
+  /// 外部直接修改了当前角色字段（例如检定日志清理）后调用，落盘并通知监听者。
+  /// 不新增存储 key，复用既有的角色持久化路径。
+  Future<void> saveCurrentCharacter() async {
+    await _saveCharacters();
+    notifyListeners();
+  }
+
   Future<void> createNewCharacter() async {
     final newChar = Character(id: _nextId());
     _characters.add(newChar);
