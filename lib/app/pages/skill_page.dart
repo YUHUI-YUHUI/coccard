@@ -47,6 +47,12 @@ class _SkillPageState extends State<SkillPage>
       appBar: AppBar(
         title: const Text('技能'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: '检定日志',
+            onPressed: () =>
+                Navigator.pushNamed(context, '/skill_check_log'),
+          ),
           Consumer<CharacterManager>(
             builder: (context, manager, _) {
               final markedCount = manager
