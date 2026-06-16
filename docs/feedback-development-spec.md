@@ -44,7 +44,7 @@
 - 推荐未加
 - 全部
 
-该 `TabBar` 当前未设置 `isScrollable: true`。对比 `ReferencePage` 已使用可滚动 TabBar，因此技能页在窄屏、高字号、部分系统字体下更容易出现截断或挤压。
+该 `TabBar` 已设置 `isScrollable: true` 和 `tabAlignment: TabAlignment.start`，避免技能页在窄屏、高字号、部分系统字体下截断或挤压。对应回归测试见 `test/skill_page_test.dart`。
 
 ### 3.2 D100 技能检定
 
@@ -84,6 +84,8 @@
 ## 4. 需求规格
 
 ### 4.1 修复筛选标签显示不完全
+
+实现状态：已完成。`SkillPage` 顶部筛选标签已改为可滚动 `TabBar`，并补充 360px 宽度、1.3 倍系统字号的 widget 回归测试。
 
 用户故事：
 
