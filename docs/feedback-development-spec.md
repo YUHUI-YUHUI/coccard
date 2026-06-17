@@ -441,3 +441,17 @@ Widget 测试：
 - **测试矩阵**：10 条 controller 单元测试 + 3 条 widget 测试；不依赖 `intl` 包；CSV 使用 `\uFEFF` BOM 兼容 Excel。
 - **兼容性**：不修改 `Character` / `SkillCheckRecord` / `SkillGrowthState` 数据结构；旧 JSON 已由 P0#4 处理默认值。
 - **风险**：CSV 转义按 RFC 4180；清理确认弹窗前置导出菜单，避免误删无法回滚。
+
+### 10.2 联机骰点房间设计（P2#4 细化）
+
+- **提出日期**：2026-06-17
+- **对应任务**：P2#4「联机骰点房间设计」
+- **完整文档**：`docs/feature-proposals/2026-06-17-联机骰点房间设计.md`
+- **范围**：联机骰点房间（创建/加入房间、服务端骰面生成、实时同步、房间日志、投骰动画）；不影响本地骰点功能（`DiceRollerWidget`、`DiceHistoryController`）。
+- **核心数据**：`DiceRoom`（房间模型）、`DiceRoomMember`（成员模型）、`DiceMessage`（骰点消息模型）、`DiceUserIdentity`（用户身份，本地持久化）。
+- **架构方案**：推荐 Firebase Cloud Firestore + Cloud Functions（骰面由服务端生成并签名，客户端通过 `onSnapshot` 实时接收）；降级方案为 WebSocket 自建服务端。
+- **安全机制**：`dice_messages` 集合的 Firestore Security Rules 禁止客户端写入，骰面由 Cloud Function 使用 `crypto.randomBytes` 生成并 HMAC-SHA256 签名。
+- **任务拆分**：11 步，每步独立 commit；顺序为 Firebase 初始化 → 用户身份 → 数据模型 → 服务层 → Cloud Functions → 房间列表页 → 房间内页 → 投骰动画 → 入口整合 → 断线重连 → 测试。
+- **测试计划**：6 条模型单元测试 + 7 条集成测试（Firebase Emulator）+ 4 条 Widget 测试 + 6 项手工验收。
+- **兼容性**：不修改 `DiceRollRecord`、`DiceHistoryController`、`DiceRollerWidget`；联机和本地骰点并存，共享 `D100CheckEvaluator` 检定逻辑。
+- **风险**：Firebase 在中国大陆不可用（需降级方案）；Cloud Functions 冷启动延迟（Blaze 计划缓解）；匿名用户身份不可靠（设备 UUID 解决）。
