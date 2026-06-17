@@ -9,6 +9,7 @@
 - P2#2 SAN 损失表达式解析 + 临时疯狂自动触发流程（f533137）
 - 2026-06-12 P2#3 提案文档 + spec 第 10 节索引（见本次 commit hash）
 - 2026-06-14 P2#3 检定日志筛选/清理/导出 代码落地（controller + page + 入口 + 路由 + 16 条测试）
+- 2026-06-17 P2#4 联机骰点房间设计提案（0f961ef）
 
 ## 任务清单（来自 docs/feedback-development-spec.md 第 5 节）
 ### P0（已完成 - 见 commit 9acd337 和 c42fa93）
@@ -28,7 +29,7 @@
 - [x] 幕间成长批量处理页面（caaf55d）
 - [x] SAN 损失表达式解析和临时疯狂自动触发流程（f533137）
 - [x] 检定日志筛选、清理、导出（ff5dd93 / 9599749 / 1f3c3f9 / a48ae0a + widget 测试）
-- [ ] 联机骰点房间设计
+- [ ] ~~联机骰点房间设计~~ → 提案文档已完成（0f961ef），含 11 步任务拆分，待代码实现
 
 ## 执行日志
 2026-06-08 17:15 | P1#3 技能页展示成功/失败次数和成长待检标记 | lib/app/pages/skill_page.dart, test/skill_growth_state_test.dart | 798abec
@@ -37,3 +38,4 @@
 2026-06-11 11:30 | P2#2 SAN 损失表达式解析 + 临时疯狂自动触发 | lib/app/data/insanity_episode.dart, lib/app/data/sanity_loss_record.dart, lib/app/data/sanity_expression.dart, lib/app/data/insanity_service.dart, lib/app/data/character.dart, lib/app/data/character_manager.dart, lib/app/pages/home_page.dart, test/insanity_service_test.dart, test/sanity_expression_test.dart, test/sanity_loss_flow_test.dart | f533137
 2026-06-12 23:00 | P2#3 提案文档 + spec 第 10 节索引（Claude CLI 未登录，跳过代码实现，直接产出可机械执行的开发文档） | docs/feature-proposals/2026-06-12-技能检定日志筛选清理导出.md, docs/feedback-development-spec.md, docs/daily-runs/.state | 见本次 commit
 2026-06-14 | P2#3 检定日志筛选/清理/导出 代码落地（按提案 6 步实现） | lib/app/setting/skill_check_log_controller.dart, lib/app/pages/skill_check_log_page.dart, lib/app/pages/skill_page.dart, lib/app/data/character_manager.dart, lib/main.dart, test/skill_check_log_controller_test.dart, test/skill_check_log_page_test.dart | ff5dd93 / 9599749 / 1f3c3f9 / a48ae0a
+2026-06-17 22:00 | P2#4 联机骰点房间设计提案 | docs/feature-proposals/2026-06-17-联机骰点房间设计.md, docs/feedback-development-spec.md | 0f961ef
