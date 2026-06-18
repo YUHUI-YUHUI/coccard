@@ -455,3 +455,16 @@ Widget 测试：
 - **测试计划**：6 条模型单元测试 + 7 条集成测试（Firebase Emulator）+ 4 条 Widget 测试 + 6 项手工验收。
 - **兼容性**：不修改 `DiceRollRecord`、`DiceHistoryController`、`DiceRollerWidget`；联机和本地骰点并存，共享 `D100CheckEvaluator` 检定逻辑。
 - **风险**：Firebase 在中国大陆不可用（需降级方案）；Cloud Functions 冷启动延迟（Blaze 计划缓解）；匿名用户身份不可靠（设备 UUID 解决）。
+
+### 10.3 战斗追踪器（Combat Tracker）
+
+- **提出日期**：2026-06-18
+- **完整文档**：`docs/feature-proposals/2026-06-18-战斗追踪器.md`
+- **范围**：战斗实例管理（创建/结束）、参战者列表（PC + 临时 NPC）、行动顺序（DEX 排序）、HP 实时追踪（受伤/昏迷/濒死/死亡自动标记）、特殊状态标签、轮次计数、战斗摘要、本地持久化。
+- **核心数据**：`CombatEncounter`（战斗实例）、`Combatant`（参战者）、`CombatantType` / `CombatantStatus` 枚举。
+- **核心控制器**：`CombatController`（`ChangeNotifier`），独立 SharedPreferences key（`combat_encorders`），不修改 `Character` 现有字段。
+- **UI 入口**：`AppDrawerWidget` 新增战斗入口 → `/combat`（战斗列表页）→ 点击进入 `/combat_detail`（战斗主页面）。
+- **任务拆分**：8 步，顺序为数据模型 → controller → 列表页 → 主页面 → 添加参战者弹窗 → 战斗摘要 → 路由入口 → widget 测试。
+- **测试矩阵**：7 条模型单元测试 + 6 条 controller 单元测试 + 3 条 widget 测试。
+- **兼容性**：不修改 `Character` / `SkillCheckRecord` / 其他现有数据结构；旧 JSON 无影响。
+- **风险**：长战斗数据量可能导致 SharedPreferences 写入变慢（限制历史 20 场缓解）；HP 高频修改需 debounce 保存。
