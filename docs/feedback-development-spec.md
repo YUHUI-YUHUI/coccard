@@ -468,3 +468,17 @@ Widget 测试：
 - **测试矩阵**：7 条模型单元测试 + 6 条 controller 单元测试 + 3 条 widget 测试。
 - **兼容性**：不修改 `Character` / `SkillCheckRecord` / 其他现有数据结构；旧 JSON 无影响。
 - **风险**：长战斗数据量可能导致 SharedPreferences 写入变慢（限制历史 20 场缓解）；HP 高频修改需 debounce 保存。
+
+### 10.4 冒险日志（Session Journal）
+
+- **提出日期**：2026-06-19
+- **对应任务**：P0-P2 全部完成后的新功能提案
+- **完整文档**：`docs/feature-proposals/2026-06-19-冒险日志.md`
+- **范围**：会话日志 CRUD（标题/日期/正文）、线索条目（标题/正文/重要标记）、NPC 记录（名字/描述/关系标签）、待办事项（文本/完成状态）、日志列表页（按时间倒序 + 月分组）、日志详情/编辑页、待办汇总视图。
+- **核心数据**：`SessionJournal`（会话日志）、`JournalClue`（线索）、`JournalNpc`（NPC）、`JournalTodo`（待办）、`NpcRelation` 枚举（friendly/neutral/hostile）。
+- **核心控制器**：`JournalController`（`ChangeNotifier`），通过 `CharacterManager.saveCurrentCharacter()` 写入，不新增 SharedPreferences key。
+- **UI 入口**：`AppDrawerWidget` 新增 `Icons.menu_book` → "冒险日志" → `/journal`（日志列表页）→ 点击进入详情页。
+- **任务拆分**：8 步，顺序为数据模型 → Character 扩展 → controller → 列表页 → 详情页 → 入口整合 → 待办汇总 → 测试。
+- **测试矩阵**：11 条单元测试（模型序列化 + Controller CRUD + 旧数据兼容）+ 3 条 Widget 测试。
+- **兼容性**：不修改 `Character` 现有字段；`sessionJournals` 缺字段时默认 `[]`；不新增 SP key。
+- **风险**：纯文本正文无格式支持（二期引入 Markdown）；无全文搜索（二期可加）。
