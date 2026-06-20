@@ -482,3 +482,17 @@ Widget 测试：
 - **测试矩阵**：11 条单元测试（模型序列化 + Controller CRUD + 旧数据兼容）+ 3 条 Widget 测试。
 - **兼容性**：不修改 `Character` 现有字段；`sessionJournals` 缺字段时默认 `[]`；不新增 SP key。
 - **风险**：纯文本正文无格式支持（二期引入 Markdown）；无全文搜索（二期可加）。
+
+### 10.5 战斗伤害计算器（Combat Damage Calculator）
+
+- **提出日期**：2026-06-20
+- **对应任务**：P0-P2 全部完成后的新功能提案
+- **完整文档**：`docs/feature-proposals/2026-06-20-战斗伤害计算器.md`
+- **范围**：单次攻击全流程计算（攻击检定 → 命中部位 → 伤害投骰 → 护甲减免 → 最终伤害）、部位护甲值管理、攻击历史记录。
+- **核心数据**：`HitLocation` 枚举（6 部位）、`ArmorValues`（部位护甲值）、`AttackResult`（攻击结果记录）。
+- **核心服务**：`AttackCalculator`（纯函数，复用 `D100CheckEvaluator`）。
+- **UI 入口**：`WeaponPage` 武器卡片增加"攻击"按钮 → 弹出 `AttackCalculatorSheet` 底部弹窗；`HomePage` 新增护甲卡片。
+- **任务拆分**：6 步，顺序为数据模型 → 攻击计算器服务 → 攻击弹窗 UI → 武器页入口 → 护甲卡片 → 测试。
+- **测试矩阵**：6 条单元测试（部位边界、护甲减免、贯穿、未命中）+ 3 条 Widget 测试。
+- **兼容性**：`Character.fromJson` 旧数据缺 `armorValues` / `attackLog` 时默认空值；不新增 SP key。
+- **风险**：伤害表达式格式多样需复用骰子解析逻辑；贯穿规则仅适用于枪械/弓箭（`canImpale` 标记）。
