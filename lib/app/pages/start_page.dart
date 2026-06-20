@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data/character_manager.dart';
+import '../widgets/character_code_import_dialog.dart';
 import '../widgets/delete_character_dialog.dart';
 
 class StartPage extends StatelessWidget {
@@ -80,12 +81,14 @@ class StartPage extends StatelessWidget {
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             leading: CircleAvatar(
               backgroundColor: Theme.of(context).colorScheme.primary,
               child: Text(
                 character.name.isNotEmpty ? character.name[0] : '?',
-                style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onPrimary),
               ),
             ),
             title: Text(
@@ -169,50 +172,85 @@ class StartPage extends StatelessWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: SizedBox(
-                height: 52,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/create_character');
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('创建新角色', style: TextStyle(fontSize: 15)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/create_character');
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text(
+                        '创建新角色',
+                        style: TextStyle(fontSize: 15),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor:
+                            Theme.of(context).colorScheme.onPrimary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SizedBox(
+                    height: 52,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/ai_character');
+                      },
+                      icon: const Icon(Icons.auto_awesome),
+                      label: const Text(
+                        'AI 辅助建卡',
+                        style: TextStyle(fontSize: 15),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        foregroundColor: Theme.of(context).colorScheme.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: SizedBox(
-                height: 52,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/ai_character');
-                  },
-                  icon: const Icon(Icons.auto_awesome),
-                  label: const Text('AI 辅助建卡', style: TextStyle(fontSize: 15)),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: Theme.of(context).colorScheme.primary),
-                    foregroundColor: Theme.of(context).colorScheme.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              key: const Key('open_character_share_code_dialog'),
+              onPressed: () => _importCharacterCode(context),
+              icon: const Icon(Icons.content_paste_go),
+              label: const Text('粘贴角色码，获取人物卡'),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _importCharacterCode(BuildContext context) async {
+    final character = await showCharacterCodeImportDialog(context);
+    if (character == null || !context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '已导入${character.name.isEmpty ? '人物卡' : '「${character.name}」'}',
+        ),
+      ),
+    );
+    await Navigator.pushNamed(context, '/home');
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../data/character_manager.dart';
 
@@ -59,6 +60,27 @@ class AppDrawerWidget extends StatelessWidget {
             onTap: () {
               Navigator.pop(context);
               Navigator.pushNamed(context, '/switch_character');
+            },
+          ),
+          Consumer<CharacterManager>(
+            builder: (context, manager, _) {
+              return ListTile(
+                leading: const Icon(Icons.content_copy),
+                title: const Text('复制当前角色码'),
+                subtitle: const Text('分享完整人物卡信息'),
+                enabled: manager.hasCharacters,
+                onTap: !manager.hasCharacters
+                    ? null
+                    : () async {
+                        final code = manager.exportCharacterShareCode();
+                        await Clipboard.setData(ClipboardData(text: code));
+                        if (!context.mounted) return;
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('角色码已复制到剪贴板')),
+                        );
+                      },
+              );
             },
           ),
           ListTile(

@@ -27,6 +27,7 @@ class DeletedCharacter {
 class CharacterManager extends ChangeNotifier {
   static const String _charactersKey = 'coc_characters';
   static const String _currentIndexKey = 'coc_current_index';
+  static const String characterShareCodePrefix = 'COCCARD1.';
 
   List<Character> _characters = [];
   int _currentIndex = 0;
@@ -167,6 +168,75 @@ class CharacterManager extends ChangeNotifier {
       'characters': _characters.map((e) => e.toJson()).toList(),
     };
     return const JsonEncoder.withIndent('  ').convert(backup);
+  }
+
+  /// 将一张角色卡编码为适合通过聊天工具复制、粘贴的单行角色码。
+  ///
+  /// 本地头像路径和本地角色 ID 不属于可移植数据，因此不会写入角色码。
+  String exportCharacterShareCode([Character? source]) {
+    final characterJson = Map<String, dynamic>.from(
+      (source ?? character).toJson(),
+    )
+      ..['id'] = 0
+      ..['avatarLocalPath'] = null;
+    final payload = json.encode({
+      'schema': 'coccard.character.v1',
+      'character': characterJson,
+    });
+    return '$characterShareCodePrefix${base64UrlEncode(utf8.encode(payload))}';
+  }
+
+  /// 从角色码新增一张角色卡，并将其设为当前角色。
+  Future<Character> importCharacterShareCode(String rawCode) async {
+    var code = rawCode.trim();
+    final fencedCode = RegExp(
+      r'```(?:[a-zA-Z0-9_-]+)?\s*([\s\S]*?)```',
+    ).firstMatch(code);
+    if (fencedCode != null) {
+      code = fencedCode.group(1)!.trim();
+    }
+
+    code = code.replaceAll(RegExp(r'\s'), '');
+    if (!code.startsWith(characterShareCodePrefix)) {
+      throw const FormatException('无法识别该角色码');
+    }
+
+    try {
+      final encoded = code.substring(characterShareCodePrefix.length);
+      if (encoded.isEmpty) {
+        throw const FormatException('角色码内容为空');
+      }
+      final decodedText = utf8.decode(base64Url.decode(encoded));
+      final decoded = json.decode(decodedText);
+      if (decoded is! Map) {
+        throw const FormatException('角色码格式不正确');
+      }
+
+      final envelope = Map<String, dynamic>.from(decoded);
+      if (envelope['schema'] != 'coccard.character.v1') {
+        throw const FormatException('不支持的角色码版本');
+      }
+      final characterValue = envelope['character'];
+      if (characterValue is! Map) {
+        throw const FormatException('角色码中没有人物卡信息');
+      }
+
+      final character = Character.fromJson(
+        Map<String, dynamic>.from(characterValue),
+      );
+      final usedIds = _characters.map((c) => c.id).toSet();
+      character.id = _nextIdFrom(usedIds);
+      character.avatarLocalPath = null;
+      _characters.add(character);
+      _currentIndex = _characters.length - 1;
+      await _saveCharacters();
+      notifyListeners();
+      return character;
+    } on FormatException {
+      rethrow;
+    } catch (_) {
+      throw const FormatException('角色码已损坏或不完整');
+    }
   }
 
   Future<int> importCharactersBackupJson(
