@@ -11,6 +11,7 @@
 - 2026-06-14 P2#3 检定日志筛选/清理/导出 代码落地（controller + page + 入口 + 路由 + 16 条测试）
 - 2026-06-17 P2#4 联机骰点房间设计提案（0f961ef）
 - 2026-06-18 战斗追踪器提案（见本次 commit）
+- 2026-06-21 战斗追踪器 Step 1 数据模型 + 单元测试（5517d3a）
 
 ## 任务清单（来自 docs/feedback-development-spec.md 第 5 节）
 ### P0（已完成 - 见 commit 9acd337 和 c42fa93）
@@ -41,3 +42,4 @@
 2026-06-14 | P2#3 检定日志筛选/清理/导出 代码落地（按提案 6 步实现） | lib/app/setting/skill_check_log_controller.dart, lib/app/pages/skill_check_log_page.dart, lib/app/pages/skill_page.dart, lib/app/data/character_manager.dart, lib/main.dart, test/skill_check_log_controller_test.dart, test/skill_check_log_page_test.dart | ff5dd93 / 9599749 / 1f3c3f9 / a48ae0a
 2026-06-17 22:00 | P2#4 联机骰点房间设计提案 | docs/feature-proposals/2026-06-17-联机骰点房间设计.md, docs/feedback-development-spec.md | 0f961ef
 2026-06-18 22:00 | 战斗追踪器提案（P0-P2 全部完成后的新功能提案） | docs/feature-proposals/2026-06-18-战斗追踪器.md, docs/feedback-development-spec.md, docs/daily-runs/.state | 见本次 commit
+2026-06-21 22:00 | 战斗追踪器 Step 1 数据模型 + 单元测试 | lib/app/data/combat_encounter.dart, test/combat_encounter_test.dart | 5517d3a
