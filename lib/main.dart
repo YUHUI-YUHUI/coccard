@@ -15,6 +15,7 @@ import 'app/pages/weapon_page.dart';
 import 'app/pages/reference_page.dart';
 import 'app/pages/ai_character_page.dart';
 import 'app/pages/rulebook_reader_page.dart';
+import 'app/pages/character_archive_page.dart';
 import 'app/setting/check_rule_controller.dart';
 import 'app/setting/combat_controller.dart';
 import 'app/setting/dice_history_controller.dart';
@@ -61,6 +62,7 @@ class COCCharacterApp extends StatelessWidget {
             '/': (context) => const StartPage(),
             '/home': (context) => const HomePage(),
             '/switch_character': (context) => const SwitchCharacterPage(),
+            '/character_archive': (context) => const CharacterArchivePage(),
             '/create_character': (context) => const CharacterCreationPage(),
             '/settings': (context) => const SettingsPage(),
             '/about': (context) => const AboutPage(),

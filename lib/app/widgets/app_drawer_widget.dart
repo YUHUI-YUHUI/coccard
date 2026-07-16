@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../data/character_manager.dart';
+import 'avatar_widget.dart';
 
 class AppDrawerWidget extends StatelessWidget {
   const AppDrawerWidget({super.key});
@@ -22,7 +23,7 @@ class AppDrawerWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Icon(Icons.person, size: 48, color: Theme.of(context).colorScheme.onPrimary),
+                    const AvatarWidget(size: 48, tappable: false),
                     const SizedBox(height: 8),
                     Text(
                       manager.character.name.isEmpty ? '新角色' : manager.character.name,
@@ -60,6 +61,16 @@ class AppDrawerWidget extends StatelessWidget {
             onTap: () {
               Navigator.pop(context);
               Navigator.pushNamed(context, '/switch_character');
+            },
+          ),
+          ListTile(
+            key: const Key('open_character_archive'),
+            leading: const Icon(Icons.photo_library_outlined),
+            title: const Text('人物卡与模组'),
+            subtitle: const Text('查看 PC 形象并按模组整理'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/character_archive');
             },
           ),
           Consumer<CharacterManager>(

@@ -10,6 +10,7 @@ import '../widgets/dice_roller.dart';
 import '../widgets/app_drawer_widget.dart';
 import '../widgets/delete_character_dialog.dart';
 import '../widgets/avatar_widget.dart';
+import '../widgets/character_portrait.dart';
 import '../data/coc_data.dart';
 import '../services/pdf_generator.dart';
 
@@ -150,7 +151,23 @@ class _HomePageState extends State<HomePage> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const AvatarWidget(size: 72),
+                GestureDetector(
+                  onTap: () => showAvatarActionSheet(context),
+                  child: Column(
+                    children: [
+                      CharacterPortrait(
+                        character: character,
+                        width: 104,
+                        height: 142,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'PC 形象 · 点击更换',
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -162,6 +179,11 @@ class _HomePageState extends State<HomePage> {
                       _infoRow('性别', character.gender),
                       _infoRow('居住地', character.residence),
                       _infoRow('出生地', character.birthplace),
+                      _infoRow(
+                        '所属模组',
+                        character.moduleName.isEmpty ? '未关联' : character.moduleName,
+                      ),
+                      _infoRow('模组状态', character.moduleStatus),
                     ],
                   ),
                 ),

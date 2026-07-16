@@ -323,6 +323,21 @@ class CharacterManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 将人物卡归档到模组。模组名为空时归入“未关联模组”。
+  Future<void> updateCharacterModule(
+    int characterId, {
+    required String moduleName,
+    required String moduleStatus,
+  }) async {
+    final index = _characters.indexWhere((c) => c.id == characterId);
+    if (index < 0) return;
+    _characters[index]
+      ..moduleName = moduleName.trim()
+      ..moduleStatus = moduleStatus;
+    await _saveCharacters();
+    notifyListeners();
+  }
+
   void updateAttribute(String attr, int value) {
     final c = character;
     // 游玩中修正单项属性时保留当前消耗：HP/MP 记录与上限的差额，

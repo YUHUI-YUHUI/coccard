@@ -27,6 +27,8 @@ class Character {
   String gender;
   String residence;
   String birthplace;
+  String moduleName;
+  String moduleStatus;
 
   int str, con, siz, dex, app, int_, pow, edu;
 
@@ -80,6 +82,8 @@ class Character {
     this.gender = '',
     this.residence = '',
     this.birthplace = '',
+    this.moduleName = '',
+    this.moduleStatus = '进行中',
     this.str = 0,
     this.con = 0,
     this.siz = 0,
@@ -139,6 +143,8 @@ class Character {
       'gender': gender,
       'residence': residence,
       'birthplace': birthplace,
+      'moduleName': moduleName,
+      'moduleStatus': moduleStatus,
       'str': str,
       'con': con,
       'siz': siz,
@@ -193,6 +199,8 @@ class Character {
       gender: json['gender'] ?? '',
       residence: json['residence'] ?? '',
       birthplace: json['birthplace'] ?? '',
+      moduleName: json['moduleName'] ?? '',
+      moduleStatus: json['moduleStatus'] ?? '进行中',
       str: json['str'] ?? 0,
       con: json['con'] ?? 0,
       siz: json['siz'] ?? 0,

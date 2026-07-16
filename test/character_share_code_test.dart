@@ -20,6 +20,11 @@ void main() {
       final source = await _newManager();
       await source.createNewCharacter();
       source.updateBasicInfo(name: '艾琳', occupation: '记者', age: '27');
+      await source.updateCharacterModule(
+        source.character.id,
+        moduleName: '无名之城',
+        moduleStatus: '进行中',
+      );
       source.setAttributes(
         str: 40,
         con: 50,
@@ -44,6 +49,7 @@ void main() {
       expect(target.character, same(imported));
       expect(imported.name, '艾琳');
       expect(imported.occupation, '记者');
+      expect(imported.moduleName, '无名之城');
       expect(imported.str, 40);
       expect(imported.skills['侦查'], 68);
       expect(imported.avatarLocalPath, isNull);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data/character_manager.dart';
 import '../widgets/delete_character_dialog.dart';
+import '../widgets/character_portrait.dart';
 
 class SwitchCharacterPage extends StatelessWidget {
   const SwitchCharacterPage({super.key});
@@ -48,17 +49,23 @@ class SwitchCharacterPage extends StatelessWidget {
                     ? Theme.of(context).colorScheme.primaryContainer
                     : null,
                 child: ListTile(
-                  leading: CircleAvatar(
-                    child: Text(
-                      character.name.isEmpty ? '?' : character.name[0],
+                  leading: ClipOval(
+                    child: CharacterPortrait(
+                      character: character,
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
                     ),
                   ),
                   title: Text(character.name.isEmpty ? '新角色' : character.name),
-                  subtitle: Text(
+                  subtitle: Text([
                     character.occupation.isEmpty
                         ? '未选择职业'
                         : character.occupation,
-                  ),
+                    character.moduleName.isEmpty
+                        ? '未关联模组'
+                        : character.moduleName,
+                  ].join(' · ')),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
