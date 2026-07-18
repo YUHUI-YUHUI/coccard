@@ -26,7 +26,9 @@ class AppDrawerWidget extends StatelessWidget {
                     const AvatarWidget(size: 48, tappable: false),
                     const SizedBox(height: 8),
                     Text(
-                      manager.character.name.isEmpty ? '新角色' : manager.character.name,
+                      manager.character.name.isEmpty
+                          ? '新角色'
+                          : manager.character.name,
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.onPrimary,
                         fontSize: 24,
@@ -37,7 +39,10 @@ class AppDrawerWidget extends StatelessWidget {
                       Text(
                         manager.character.occupation,
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.7),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onPrimary
+                              .withOpacity(0.7),
                           fontSize: 14,
                         ),
                       ),
@@ -116,6 +121,16 @@ class AppDrawerWidget extends StatelessWidget {
             onTap: () {
               Navigator.pop(context);
               Navigator.pushNamed(context, '/reference');
+            },
+          ),
+          ListTile(
+            key: const Key('open_session_log_import'),
+            leading: const Icon(Icons.forum_outlined),
+            title: const Text('跑团 Log 转聊天'),
+            subtitle: const Text('导入记录并生成聊天样式'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/session_log_import');
             },
           ),
           const Divider(),

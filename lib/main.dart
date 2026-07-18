@@ -16,6 +16,7 @@ import 'app/pages/reference_page.dart';
 import 'app/pages/ai_character_page.dart';
 import 'app/pages/rulebook_reader_page.dart';
 import 'app/pages/character_archive_page.dart';
+import 'app/pages/session_log_import_page.dart';
 import 'app/setting/check_rule_controller.dart';
 import 'app/setting/combat_controller.dart';
 import 'app/setting/dice_history_controller.dart';
@@ -73,6 +74,7 @@ class COCCharacterApp extends StatelessWidget {
             '/reference': (context) => const ReferencePage(),
             '/ai_character': (context) => const AiCharacterPage(),
             '/rulebook': (context) => const RulebookReaderPage(),
+            '/session_log_import': (context) => const SessionLogImportPage(),
           },
         );
       },

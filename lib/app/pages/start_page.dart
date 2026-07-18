@@ -234,6 +234,13 @@ class StartPage extends StatelessWidget {
               icon: const Icon(Icons.content_paste_go),
               label: const Text('粘贴角色码，获取人物卡'),
             ),
+            TextButton.icon(
+              key: const Key('open_session_log_from_start'),
+              onPressed: () =>
+                  Navigator.pushNamed(context, '/session_log_import'),
+              icon: const Icon(Icons.forum_outlined),
+              label: const Text('导入跑团 Log，生成聊天记录'),
+            ),
           ],
         ),
       ),
