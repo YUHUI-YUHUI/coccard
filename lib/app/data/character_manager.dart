@@ -28,6 +28,7 @@ class CharacterManager extends ChangeNotifier {
   static const String _charactersKey = 'coc_characters';
   static const String _currentIndexKey = 'coc_current_index';
   static const String characterShareCodePrefix = 'COCCARD1.';
+  static const int maxQuickSkills = 8;
 
   List<Character> _characters = [];
   int _currentIndex = 0;
@@ -74,6 +75,25 @@ class CharacterManager extends ChangeNotifier {
   /// 外部直接修改了当前角色字段（例如检定日志清理）后调用，落盘并通知监听者。
   /// 不新增存储 key，复用既有的角色持久化路径。
   Future<void> saveCurrentCharacter() async {
+    await _saveCharacters();
+    notifyListeners();
+  }
+
+  /// 更新当前角色在首页展示的快捷检定技能。
+  ///
+  /// 去除空名称和重复项，并限制数量，避免首页快捷区无限增长。
+  Future<void> setQuickSkills(Iterable<String> skillNames) async {
+    if (_characters.isEmpty) return;
+
+    final normalized = <String>[];
+    for (final skillName in skillNames) {
+      final name = skillName.trim();
+      if (name.isEmpty || normalized.contains(name)) continue;
+      normalized.add(name);
+      if (normalized.length == maxQuickSkills) break;
+    }
+
+    character.quickSkills = normalized;
     await _saveCharacters();
     notifyListeners();
   }

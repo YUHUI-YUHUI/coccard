@@ -61,6 +61,7 @@ class Character {
   List<CharacterWeapon> weapons;
   List<CharacterItem> items;
   Map<String, int> skills;
+  List<String> quickSkills;
   int luckDice;
 
   List<SkillCheckRecord> skillCheckRecords;
@@ -119,6 +120,7 @@ class Character {
     List<CharacterWeapon>? weapons,
     List<CharacterItem>? items,
     Map<String, int>? skills,
+    List<String>? quickSkills,
     this.luckDice = 3,
     List<SkillCheckRecord>? skillCheckRecords,
     Map<String, SkillGrowthState>? skillGrowth,
@@ -127,6 +129,7 @@ class Character {
   })  : weapons = weapons ?? [],
         items = items ?? [],
         skills = skills ?? {},
+        quickSkills = quickSkills ?? [],
         skillCheckRecords = skillCheckRecords ?? [],
         skillGrowth = skillGrowth ?? {},
         sanityLossRecords = sanityLossRecords ?? [],
@@ -180,6 +183,7 @@ class Character {
       'weapons': weapons.map((w) => w.toJson()).toList(),
       'items': items.map((i) => i.toJson()).toList(),
       'skills': skills,
+      'quickSkills': quickSkills,
       'luckDice': luckDice,
       'skillCheckRecords': skillCheckRecords.map((r) => r.toJson()).toList(),
       'skillGrowth': skillGrowth.map((k, v) => MapEntry(k, v.toJson())),
@@ -246,6 +250,10 @@ class Character {
             (k, v) => MapEntry(k, v as int),
           ) ??
           {},
+      quickSkills: (json['quickSkills'] as List<dynamic>?)
+              ?.whereType<String>()
+              .toList() ??
+          [],
       skillCheckRecords: (json['skillCheckRecords'] as List<dynamic>?)
               ?.map((r) =>
                   SkillCheckRecord.fromJson(Map<String, dynamic>.from(r as Map)))

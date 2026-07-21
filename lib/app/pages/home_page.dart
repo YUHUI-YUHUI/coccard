@@ -11,6 +11,7 @@ import '../widgets/app_drawer_widget.dart';
 import '../widgets/delete_character_dialog.dart';
 import '../widgets/avatar_widget.dart';
 import '../widgets/character_portrait.dart';
+import '../widgets/quick_skill_card.dart';
 import '../data/coc_data.dart';
 import '../services/pdf_generator.dart';
 
@@ -112,6 +113,8 @@ class _HomePageState extends State<HomePage> {
                 _buildAttributeCard(context, character, manager),
                 const SizedBox(height: 16),
                 _buildDerivedStatsCard(context, manager.character, manager),
+                const SizedBox(height: 16),
+                QuickSkillCard(character: character, manager: manager),
                 const SizedBox(height: 16),
                 _buildSanityCard(context, manager.character, manager),
                 const SizedBox(height: 16),
