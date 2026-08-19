@@ -207,6 +207,34 @@ class AiService {
   }
 
   Future<String> _callApi(String systemPrompt, String userPrompt) async {
+    return _callApiWithOptions(
+      systemPrompt: systemPrompt,
+      userPrompt: userPrompt,
+    );
+  }
+
+  /// 通用对话补全：返回模型生成的文本。
+  /// 供 DeepSeek Harness 的资料问答、场景行动等自由文本任务使用。
+  Future<String> chat({
+    required String systemPrompt,
+    required String userPrompt,
+    double temperature = 0.7,
+    int maxTokens = 2048,
+  }) {
+    return _callApiWithOptions(
+      systemPrompt: systemPrompt,
+      userPrompt: userPrompt,
+      temperature: temperature,
+      maxTokens: maxTokens,
+    );
+  }
+
+  Future<String> _callApiWithOptions({
+    required String systemPrompt,
+    required String userPrompt,
+    double temperature = 0.7,
+    int maxTokens = 2048,
+  }) async {
     final client = _client ?? http.Client();
     try {
       final resp = await client.post(
@@ -217,7 +245,8 @@ class AiService {
         },
         body: jsonEncode({
           'model': provider.model,
-          'temperature': 0.7,
+          'temperature': temperature,
+          'max_tokens': maxTokens,
           'messages': [
             {'role': 'system', 'content': systemPrompt},
             {'role': 'user', 'content': userPrompt},
