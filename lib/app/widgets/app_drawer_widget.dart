@@ -124,6 +124,16 @@ class AppDrawerWidget extends StatelessWidget {
             },
           ),
           ListTile(
+            key: const Key('open_ai_harness'),
+            leading: const Icon(Icons.smart_toy_outlined),
+            title: const Text('AI 助手'),
+            subtitle: const Text('DeepSeek Harness · 资料/行动/建卡'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/ai_harness');
+            },
+          ),
+          ListTile(
             key: const Key('open_session_log_import'),
             leading: const Icon(Icons.forum_outlined),
             title: const Text('跑团 Log 转聊天'),

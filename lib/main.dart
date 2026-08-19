@@ -14,6 +14,7 @@ import 'app/pages/skill_check_log_page.dart';
 import 'app/pages/weapon_page.dart';
 import 'app/pages/reference_page.dart';
 import 'app/pages/ai_character_page.dart';
+import 'app/pages/ai_harness_page.dart';
 import 'app/pages/rulebook_reader_page.dart';
 import 'app/pages/character_archive_page.dart';
 import 'app/pages/session_log_import_page.dart';
@@ -73,6 +74,7 @@ class COCCharacterApp extends StatelessWidget {
             '/weapons': (context) => const WeaponPage(),
             '/reference': (context) => const ReferencePage(),
             '/ai_character': (context) => const AiCharacterPage(),
+            '/ai_harness': (context) => const AiHarnessPage(),
             '/rulebook': (context) => const RulebookReaderPage(),
             '/session_log_import': (context) => const SessionLogImportPage(),
           },
